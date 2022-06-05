@@ -5,8 +5,8 @@ from djmoney.models.fields import MoneyField
 class Product(models.Model):
     name = models.CharField("Product Name", max_length=250)
     price = MoneyField(max_digits=19, decimal_places=4, default_currency='USD')
-    discount = models.ForeignKey("Discount", blank=True, null=True)
-    category = models.ForeignKey("Category")
+    discount = models.ForeignKey("Discount", blank=True, null=True, on_delete=models.SET_NULL, related_name="products")
+    category = models.ForeignKey("Category", blank=True, null=True, on_delete=models.SET_NULL, related_name="products")
 
 
 class Discount(models.Model):
@@ -16,6 +16,7 @@ class Discount(models.Model):
 
 
 class File(models.Model):
+    product = models.ForeignKey("Product", on_delete=models.CASCADE, related_name="files")
     name = models.CharField("Name", max_length=250, blank=True, null=True)
     file = CloudinaryField('file')
 
