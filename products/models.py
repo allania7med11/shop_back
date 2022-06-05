@@ -6,6 +6,7 @@ class Product(models.Model):
     name = models.CharField("Product Name", max_length=250)
     price = MoneyField(max_digits=19, decimal_places=4, default_currency='USD')
     discount = models.ForeignKey("Discount", blank=True, null=True)
+    category = models.ForeignKey("Category")
 
 
 class Discount(models.Model):
@@ -17,3 +18,7 @@ class Discount(models.Model):
 class File(models.Model):
     name = models.CharField("Name", max_length=250, blank=True, null=True)
     file = CloudinaryField('file')
+
+class Category(models.Model):
+    name = models.CharField("Name", max_length=250, blank=True, null=True)
+    slug = models.SlugField("Slug", max_length=100, unique=True)
