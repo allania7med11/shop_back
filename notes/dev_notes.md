@@ -1,0 +1,5 @@
+# SHP-18
+- add env variables:
+    - CLOUDINARY_NAME
+    - CLOUDINARY_API_KEY
+    - CLOUDINARY_API_SECRET
