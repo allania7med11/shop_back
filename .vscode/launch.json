@@ -58,5 +58,16 @@
       ],
       "django": true
     },
+    {
+      "name": "Shop_Back: Super User",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/manage.py",
+      "args": [
+        "createsuperuser"
+      ],
+      "django": true,
+      "justMyCode": true,
+    },
   ]
 }
