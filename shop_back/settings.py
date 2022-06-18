@@ -41,12 +41,14 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django_extensions",
     "rest_framework",
+    "corsheaders",
     "cloudinary",
     "djmoney",
-    "products"
+    "products",
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -139,3 +141,5 @@ CLOUDINARY = {
     "api_secret": env("CLOUDINARY_API_SECRET"),
     "secure": True,
 }
+
+CORS_ORIGIN_ALLOW_ALL = True
