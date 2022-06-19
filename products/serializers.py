@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from products.models import Category, Discount, Product
+from products.models import Category, Product, File, Discount
 
 
 class DiscountSerializer(serializers.ModelSerializer):
@@ -9,12 +9,32 @@ class DiscountSerializer(serializers.ModelSerializer):
         fields = ["name", "percent", "active"]
 
 
+class FileSerializer(serializers.ModelSerializer):
+    url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = File
+        fields = ["url"]
+
+    def get_url(self, obj):
+        return obj.get_url()
+
+
 class ProductSerializer(serializers.ModelSerializer):
     discount = DiscountSerializer()
+    files = FileSerializer(many=True)
 
     class Meta:
         model = Product
-        fields = ["id", "name", "price", "price_currency", "discount", "category"]
+        fields = [
+            "id",
+            "name",
+            "files",
+            "price",
+            "price_currency",
+            "discount",
+            "category",
+        ]
 
 
 class CategorySerializer(serializers.ModelSerializer):
