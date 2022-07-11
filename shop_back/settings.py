@@ -22,12 +22,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-is_fs0t4#p-n73y&zvj8cs_hyf*erk9fay0+3rf$z@%5svt+yx"
-
+SECRET_KEY = env(
+    "SECRET_KEY",
+    default="django-insecure-c_6y=5b+t$rz7b0!7bwx1rs+(%a1pi=r4p36%i+r0kkg$th!ew",
+)
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env.bool("DEBUG", default=True)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = env.list(
+    "DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.1"]
+)
 
 
 # Application definition
@@ -83,7 +87,14 @@ WSGI_APPLICATION = "shop_back.wsgi.application"
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
 
 DATABASES = {
-    "default": env.db("DATABASE_URL")
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': env('POSTGRES_NAME'),
+        'USER': env('POSTGRES_USER'),
+        'PASSWORD': env('POSTGRES_PASSWORD'),
+        'HOST': 'db',
+        'PORT': 5432,
+    }
 }
 
 
