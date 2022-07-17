@@ -1,10 +1,9 @@
 version: '3.4'
-
 services:
   db:
     image: postgres
     volumes:
-      - ./data/db:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data/
     environment:
       - POSTGRES_DB=postgres
       - POSTGRES_USER=postgres
@@ -17,6 +16,20 @@ services:
     ports:
       - 8000:8000
     env_file:
-    - .env
+      - .env
     depends_on:
-    - db
+      - db
+    volumes:
+      - static_volume:/app/static
+  nginx:
+    build: ./nginx
+    restart: always
+    volumes:
+      - static_volume:/app/static
+    ports:
+      - 80:80
+    depends_on:
+      - mysite
+volumes:
+  postgres_data:
+  static_volume:
