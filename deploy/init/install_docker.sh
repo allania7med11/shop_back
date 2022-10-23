@@ -1,3 +1,4 @@
+echo "Docker"
 sudo apt-get update
 sudo apt-get install \
     ca-certificates \
@@ -13,3 +14,9 @@ sudo apt-get update
 sudo chmod a+r /etc/apt/keyrings/docker.gpg
 sudo apt-get update
 sudo apt-get -y install docker-ce docker-ce-cli containerd.io docker-compose-plugin
+echo "Docker without sudo"
+sudo apt-get install acl
+sudo setfacl -m user:$USER:rw /var/run/docker.sock
+echo "Docker Compose"
+sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
