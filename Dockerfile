@@ -26,4 +26,7 @@ RUN adduser -u 5678 --disabled-password --gecos "" appuser
 RUN chown -R appuser /app
 USER appuser
 
+# Collect static files
+RUN python manage.py collectstatic --noinput
+
 ENTRYPOINT ["sh", "./entrypoint.sh"]

@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 import os
 import environ
 from pathlib import Path
+from django.core.management.utils import get_random_secret_key
 
 env = environ.Env()
 
@@ -25,7 +26,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env(
     "DJANGO_SECRET_KEY",
-    default="django-insecure-c_6y=5b+t$rz7b0!7bwx1rs+(%a1pi=r4p36%i+r0kkg$th!ew",
+    default=get_random_secret_key(),
 )
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool("DJANGO_DEBUG", default=True)
@@ -147,9 +148,9 @@ STATIC_ROOT = os.path.join(BASE_DIR, "static")
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 CLOUDINARY = {
-    "cloud_name": env("CLOUDINARY_NAME"),
-    "api_key": env("CLOUDINARY_API_KEY"),
-    "api_secret": env("CLOUDINARY_API_SECRET"),
+    "cloud_name": env("CLOUDINARY_NAME", default=""),
+    "api_key": env("CLOUDINARY_API_KEY", default=""),
+    "api_secret": env("CLOUDINARY_API_SECRET", default=""),
     "secure": True,
 }
 
