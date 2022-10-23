@@ -1,3 +1,4 @@
+git clone https://github.com/allania7med11/shop_back.git
 Add .env file to the project
 Add Public IPv4 address to DJANGO_ALLOWED_HOSTS
 chmod +x ./deploy/init_server.sh
