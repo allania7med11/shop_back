@@ -32,7 +32,7 @@ SECRET_KEY = env(
 DEBUG = env.bool("DJANGO_DEBUG", default=True)
 
 ALLOWED_HOSTS = env.list(
-    "DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.1", "django"]
+    "DJANGO_ALLOWED_HOSTS", default=["*"]
 )
 
 CSRF_TRUSTED_ORIGINS = env.list(
