@@ -30,15 +30,12 @@ SECRET_KEY = env(
 )
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool("DJANGO_DEBUG", default=True)
+CORS_ALLOW_ALL_ORIGINS=env.bool("DJANGO_CORS_ALLOW_ALL_ORIGINS", default=False)
 
 ALLOWED_HOSTS = env.list(
     "DJANGO_ALLOWED_HOSTS", default=["*"]
 )
 
-CSRF_TRUSTED_ORIGINS = env.list(
-    "DJANGO_CSRF_TRUSTED_ORIGINS",
-    default=["http://localhost", "http://127.0.0.1", "http://django"],
-)
 
 
 # Application definition
