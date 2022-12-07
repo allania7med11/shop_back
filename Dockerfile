@@ -1,5 +1,9 @@
 # For more information, please refer to https://aka.ms/vscode-docker-python
-FROM python:3.8-slim
+FROM python:3.8-slim 
+# Install git
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y git
 
 EXPOSE 8000
 

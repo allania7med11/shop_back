@@ -15,7 +15,7 @@ from pathlib import Path
 from django.core.management.utils import get_random_secret_key
 
 env = environ.Env()
-
+env.read_env()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -93,7 +93,7 @@ WSGI_APPLICATION = "shop_back.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": env("POSTGRES_NAME", default="postgres"),
+        "NAME": env("POSTGRES_NAME", default="shop_db"),
         "USER": env("POSTGRES_USER", default="postgres"),
         "PASSWORD": env("POSTGRES_PASSWORD", default="postgres"),
         "HOST": env("POSTGRES_HOST", default="localhost"),
@@ -150,7 +150,7 @@ CLOUDINARY = {
     "api_secret": env("CLOUDINARY_API_SECRET", default=""),
     "secure": True,
 }
-
+print("CLOUDINARY", CLOUDINARY)
 CORS_ORIGIN_ALLOW_ALL = True
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
