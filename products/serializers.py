@@ -23,6 +23,10 @@ class FileSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     discount = DiscountSerializer()
     files = FileSerializer(many=True)
+    description_html = serializers.SerializerMethodField()
+
+    def get_description_html(self, instance: Product):
+        return str(instance.description.html)
 
     class Meta:
         model = Product
@@ -34,6 +38,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "price_currency",
             "discount",
             "category",
+            "description_html",
         ]
 
 

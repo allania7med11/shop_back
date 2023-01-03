@@ -1,6 +1,7 @@
 from django.db import models
 from cloudinary.models import CloudinaryField
 from djmoney.models.fields import MoneyField
+from django_quill.fields import QuillField
 
 
 class Product(models.Model):
@@ -20,6 +21,7 @@ class Product(models.Model):
         on_delete=models.SET_NULL,
         related_name="products",
     )
+    description = QuillField("Description", blank=True, null=True)
 
     def __str__(self):
         return self.name
