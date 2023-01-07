@@ -2,6 +2,8 @@ from django.db import models
 from cloudinary.models import CloudinaryField
 from djmoney.models.fields import MoneyField
 
+from products.utils.slugify import unique_slugify
+
 
 class Product(models.Model):
     name = models.CharField("Product Name", max_length=250)
@@ -46,8 +48,12 @@ class File(models.Model):
 
 
 class Category(models.Model):
-    name = models.CharField("Name", max_length=250, blank=True, null=True)
+    name = models.CharField("Name", max_length=250)
     slug = models.SlugField("Slug", max_length=100, unique=True)
 
     def __str__(self):
         return self.name
+    
+    def save(self, **kwargs):
+        unique_slugify(self, self.name) 
+        super(Category, self).save(**kwargs)
