@@ -37,9 +37,13 @@ class ProductSerializer(serializers.ModelSerializer):
         ]
 
 
-class CategorySerializer(serializers.ModelSerializer):
+class CategorySerializer(serializers.HyperlinkedModelSerializer):
+    url = serializers.HyperlinkedIdentityField(
+        view_name='category-detail',
+        lookup_field='slug'
+    )
     products = ProductSerializer(many=True, read_only=True)
 
     class Meta:
         model = Category
-        fields = ["id", "name", "slug", "products"]
+        fields = ["url", "slug", "id", "name", "products"]
