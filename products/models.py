@@ -7,6 +7,7 @@ from products.utils.slugify import unique_slugify
 
 class Product(models.Model):
     name = models.CharField("Product Name", max_length=250)
+    slug = models.SlugField("Slug", max_length=100, unique=True, null=True)
     price = MoneyField(max_digits=19, decimal_places=4, default_currency="USD")
     discount = models.ForeignKey(
         "Discount",
@@ -25,6 +26,9 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
+    def save(self, **kwargs):
+        unique_slugify(self, self.name) 
+        super(Product, self).save(**kwargs)
 
 
 class Discount(models.Model):
