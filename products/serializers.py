@@ -19,14 +19,28 @@ class FileSerializer(serializers.ModelSerializer):
     def get_url(self, obj):
         return obj.get_url()
 
+class CategoryProductSerializer(serializers.HyperlinkedModelSerializer):
+    url = serializers.HyperlinkedIdentityField(
+        view_name="category-detail", lookup_field="slug"
+    )
 
-class ProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ["url", "slug", "id", "name"]
+
+class ProductSerializer(serializers.HyperlinkedModelSerializer):
+    url = serializers.HyperlinkedIdentityField(
+        view_name="product-detail", lookup_field="slug"
+    )
+    category = CategoryProductSerializer(read_only=True)
     discount = DiscountSerializer()
     files = FileSerializer(many=True)
 
     class Meta:
         model = Product
         fields = [
+            "url",
+            "slug",
             "id",
             "name",
             "files",
@@ -39,8 +53,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
 class CategorySerializer(serializers.HyperlinkedModelSerializer):
     url = serializers.HyperlinkedIdentityField(
-        view_name='category-detail',
-        lookup_field='slug'
+        view_name="category-detail", lookup_field="slug"
     )
     products = ProductSerializer(many=True, read_only=True)
 
