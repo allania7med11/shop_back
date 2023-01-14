@@ -10,6 +10,7 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     """
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
+    lookup_field = 'slug'
     permission_classes = [permissions.AllowAny]
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
