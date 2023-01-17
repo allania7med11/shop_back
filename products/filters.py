@@ -3,11 +3,12 @@ from django.db.models import Q
 from .models import Product
 
 class ProductFilter(filters.FilterSet):
+    category = filters.CharFilter(field_name='category__slug')
     search = filters.CharFilter(method='filter_search')
 
     class Meta:
         model = Product
-        fields = ['search']
+        fields = ['category', 'search']
 
     def filter_search(self, queryset, name, value):
         if not value:
