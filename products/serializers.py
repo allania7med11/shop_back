@@ -42,7 +42,7 @@ class ProductSerializer(serializers.HyperlinkedModelSerializer):
         current_price = getattr(obj,"current_price",None)
         if current_price: 
             return current_price 
-        if obj.discount:
+        if obj.discount and obj.discount.active:
             return obj.price.amount * (1 - obj.discount.percent / 100)
         return obj.price.amount
 

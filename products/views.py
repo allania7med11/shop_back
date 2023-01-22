@@ -23,11 +23,12 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
         queryset = super().get_queryset()
         queryset = queryset.annotate(
             current_price=Case(
-                When(discount__isnull=True, then=F("price")),
                 When(
                     discount__isnull=False,
+                    discount__active=True,
                     then=F("price") * (1 - F("discount__percent") / 100),
                 ),
+                default=F("price"),
                 output_field=DecimalField(),
             )
         )
