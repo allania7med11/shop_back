@@ -1,4 +1,5 @@
 from rest_framework import viewsets
+from products.filters import ProductFilter
 from products.models import Category, Product
 
 from products.serializers import CategorySerializer, ProductSerializer
@@ -10,9 +11,10 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     """
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
+    filter_class = ProductFilter
     lookup_field = 'slug'
     permission_classes = [permissions.AllowAny]
-
+    
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     """
     API endpoint that allows Products to be viewed or edited.
