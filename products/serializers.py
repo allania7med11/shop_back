@@ -34,12 +34,21 @@ class ProductSerializer(serializers.HyperlinkedModelSerializer):
     )
     category = CategoryProductSerializer(read_only=True)
     discount = DiscountSerializer()
+    current_price = serializers.SerializerMethodField()
     files = FileSerializer(many=True)
     description_html = serializers.SerializerMethodField()
 
+    def get_current_price(self, obj):
+        current_price = getattr(obj,"current_price",None)
+        if current_price: 
+            return current_price 
+        if obj.discount and obj.discount.active:
+            return obj.price.amount * (1 - obj.discount.percent / 100)
+        return obj.price.amount
+
     def get_description_html(self, instance: Product):
         return str(instance.description.html)
-
+    
     class Meta:
         model = Product
         fields = [
@@ -51,6 +60,7 @@ class ProductSerializer(serializers.HyperlinkedModelSerializer):
             "price",
             "price_currency",
             "discount",
+            "current_price",
             "category",
             "description_html",
         ]

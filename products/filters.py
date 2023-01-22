@@ -5,10 +5,11 @@ from .models import Product
 class ProductFilter(filters.FilterSet):
     category = filters.CharFilter(field_name='category__slug')
     search = filters.CharFilter(method='filter_search')
+    current_price = filters.RangeFilter()
 
     class Meta:
         model = Product
-        fields = ['category', 'search']
+        fields = ['category', 'search', 'current_price']
 
     def filter_search(self, queryset, name, value):
         if not value:
