@@ -11,9 +11,15 @@ class DiscountFilter(filters.RangeFilter):
 
 class ProductFilter(filters.FilterSet):
     category = filters.CharFilter(field_name='category__slug')
-    search = filters.CharFilter(method='filter_search')
-    current_price = filters.RangeFilter()
+    search = filters.CharFilter(method='filter_search', label='Search In Name/Description')
+    current_price = filters.RangeFilter(label='Current Price')
     discount = DiscountFilter(field_name='discount__percent')
+    ordering = filters.OrderingFilter(
+        fields=(
+            ('current_price', 'current_price'),
+            ('name', 'name'),
+        ),
+    )
 
     class Meta:
         model = Product
