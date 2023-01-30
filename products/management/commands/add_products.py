@@ -14,8 +14,8 @@ class Command(BaseCommand):
             "products/management/commands/utils/add_products/data.json"
         ) as json_file:
             data = json.load(json_file)
-            productData = data["products"][1]
-            productMap = ProductMapSerializer(data=productData)
-            if productMap.is_valid():
-                print(productMap.validated_data)
-                productMap.save()
+            for productData in data["products"]:
+                productMap = ProductMapSerializer(data=productData)
+                if productMap.is_valid():
+                    print(productMap.validated_data)
+                    productMap.save()
