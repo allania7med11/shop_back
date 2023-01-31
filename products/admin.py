@@ -1,6 +1,10 @@
 from django.contrib import admin
 from products.models import Product, Discount, File, Category
 
+admin.site.site_header = "Shoppingify Admin"
+admin.site.site_title = "Shoppingify Admin Portal"
+admin.site.index_title = "Welcome to Shoppingify Portal"
+
 # Register your models here.
 admin.site.register(Discount)
 admin.site.register(File)
