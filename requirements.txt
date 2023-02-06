@@ -11,6 +11,7 @@ django-environ==0.8.1
 django-extensions==3.1.5
 django-filter==21.1
 django-money==2.1.1
+django-quill-editor==0.1.40
 django-shell-plus==1.1.7
 djangorestframework==3.13.1
 gunicorn==20.1.0
