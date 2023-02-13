@@ -16,6 +16,8 @@ class FileInline(admin.TabularInline):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
+    list_display = ["name", "category"]
+    list_filter = ('category',)
     inlines = [
         FileInline,
     ]
