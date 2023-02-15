@@ -10,6 +10,9 @@ class Command(BaseCommand):
     help = "Command to products to database from dummyjson"
 
     def handle(self, *args, **options):
+        self.stdout.write(
+            "adding products from dummyjson..."
+        )
         with open(
             "products/management/commands/utils/add_products_from_dummyjson/data.json"
         ) as json_file:
@@ -17,5 +20,7 @@ class Command(BaseCommand):
             for productData in data["products"]:
                 productMap = ProductMapSerializer(data=productData)
                 if productMap.is_valid():
-                    print(productMap.validated_data)
                     productMap.save()
+        self.stdout.write(
+            "Products were added successfully from dummyjson"
+        )

@@ -1,3 +1,6 @@
 from django.db import models
 
-# Create your models here.
+
+class CommandHistory(models.Model):
+    name = models.CharField("Name of command", max_length=200)
+    applied_at = models.DateTimeField(auto_now_add=True)

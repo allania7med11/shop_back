@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "cloudinary",
     "djmoney",
+    "core",
     "products",
 ]
 
