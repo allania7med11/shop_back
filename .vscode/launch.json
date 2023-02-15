@@ -23,7 +23,7 @@
       "request": "launch",
       "program": "${workspaceFolder}/manage.py",
       "args": [
-        "shell_plus" // runscripts
+        "runscripts" // shell_plus, runscripts 
       ],
       "django": true,
       "justMyCode": true,

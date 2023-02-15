@@ -8,7 +8,8 @@ class Command(BaseCommand):
 
     scripts = [
         Script("add_products_from_dummyjson"),
-        Script("add_products_from_api")
+        Script("add_products_from_api"),
+        Script("update_categories")
     ]
 
     def handle(self, *args, **options):
