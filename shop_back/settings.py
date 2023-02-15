@@ -16,6 +16,8 @@ from django.core.management.utils import get_random_secret_key
 
 env = environ.Env()
 env.read_env()
+
+VERSION = "1.1.1"
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
