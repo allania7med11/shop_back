@@ -63,6 +63,7 @@ class ProductSerializer(serializers.HyperlinkedModelSerializer):
             "current_price",
             "category",
             "description_html",
+            "updated_at"
         ]
 
 

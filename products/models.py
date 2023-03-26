@@ -33,6 +33,9 @@ class Product(models.Model):
     def save(self, **kwargs):
         unique_slugify(self, self.name) 
         super(Product, self).save(**kwargs)
+    
+    class Meta:
+        ordering = ['-updated_at']
 
 
 class Discount(models.Model):
