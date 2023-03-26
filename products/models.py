@@ -25,12 +25,17 @@ class Product(models.Model):
         related_name="products",
     )
     description = QuillField("Description", blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.name
     def save(self, **kwargs):
         unique_slugify(self, self.name) 
         super(Product, self).save(**kwargs)
+    
+    class Meta:
+        ordering = ['-updated_at']
 
 
 class Discount(models.Model):
@@ -56,6 +61,8 @@ class File(models.Model):
 class Category(models.Model):
     name = models.CharField("Name", max_length=250)
     slug = models.SlugField("Slug", max_length=100, unique=True, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.name
