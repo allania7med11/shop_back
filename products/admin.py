@@ -16,11 +16,12 @@ class FileInline(admin.TabularInline):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ["name", "category"]
+    list_display = ["name", "price","discount", "category","updated_at"]
     list_filter = ('category',)
     inlines = [
         FileInline,
     ]
+    search_fields = ['name', 'description']
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
