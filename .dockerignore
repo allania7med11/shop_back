@@ -27,3 +27,4 @@ notes
 **/values.dev.yaml
 README.md
 .env
+/shop_back_static
