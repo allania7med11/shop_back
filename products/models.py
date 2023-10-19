@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 from cloudinary.models import CloudinaryField
 from djmoney.models.fields import MoneyField
 from django_quill.fields import QuillField
@@ -70,3 +71,38 @@ class Category(models.Model):
     def save(self, **kwargs):
         unique_slugify(self, self.name) 
         super(Category, self).save(**kwargs)
+
+class Order(models.Model):
+    DRAFT = 'draft'
+    PROCESSING = 'processing'
+    SHIPPED = 'shipped'
+    DELIVERED = 'delivered'
+    CANCELED = 'canceled'
+
+    class OrderStatus(models.TextChoices):
+        DRAFT = 'draft', 'Draft'
+        PROCESSING = 'processing', 'Processing'
+        SHIPPED = 'shipped', 'Shipped'
+        DELIVERED = 'delivered', 'Delivered'
+        CANCELED = 'canceled', 'Canceled'
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)  
+    session_id = models.CharField(max_length=255, blank=True, null=True)  # Store the session ID for non-logged-in users
+    order_date = models.DateTimeField(auto_now_add=True)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=50, choices=OrderStatus.choices, default=OrderStatus.DRAFT)
+
+    def __str__(self):
+        return f"Order #{self.id} ({self.get_status_display()})"
+
+class OrderItems(models.Model):
+    order = models.ForeignKey('Order', on_delete=models.CASCADE)  
+    product = models.ForeignKey('Product', on_delete=models.PROTECT)  
+    quantity = models.PositiveIntegerField()
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.quantity} x {self.product}"
+
+    class Meta:
+        verbose_name_plural = "Order Items"
