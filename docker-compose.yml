@@ -1,11 +1,15 @@
-version: '3.4'
+version: '3'
+
 services:
-  mysite:
-    image: mysite
+  shop_back:
+    image: shop_back
     build:
       context: .
-      dockerfile: ./Dockerfile
-    ports:
-      - 8000:8000
+      dockerfile: Dockerfile
     env_file:
       - .env
+    restart: unless-stopped
+    network_mode: "host"
+    volumes:
+      - .env:/.env
+    
