@@ -31,6 +31,13 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
+    
+    @property
+    def current_price(self) -> float:
+        if self.discount and self.discount.active:
+            return self.price.amount * (1 - self.discount.percent / 100)
+        return self.price.amount
+    
     def save(self, **kwargs):
         unique_slugify(self, self.name) 
         super(Product, self).save(**kwargs)
@@ -89,7 +96,7 @@ class Order(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)  
     session_id = models.CharField(max_length=255, blank=True, null=True)  # Store the session ID for non-logged-in users
     order_date = models.DateTimeField(auto_now_add=True)
-    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     status = models.CharField(max_length=50, choices=OrderStatus.choices, default=OrderStatus.DRAFT)
 
     def __str__(self):
@@ -99,7 +106,7 @@ class OrderItems(models.Model):
     order = models.ForeignKey('Order', on_delete=models.CASCADE)  
     product = models.ForeignKey('Product', on_delete=models.PROTECT)  
     quantity = models.PositiveIntegerField()
-    subtotal = models.DecimalField(max_digits=10, decimal_places=2)
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
 
     def __str__(self):
         return f"{self.quantity} x {self.product}"
