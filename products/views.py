@@ -1,12 +1,18 @@
 from django.db.models import F, Case, When, DecimalField
 from rest_framework import viewsets
 from products.filters import ProductFilter
-from products.models import Category, Order, Product
+from products.models import Category, OrderItems, Product
 
-from products.serializers import CategorySerializer, ProductSerializer
+from products.serializers import (
+    CartItemsSerializer,
+    CategorySerializer,
+    ProductSerializer,
+)
 from rest_framework import permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+
+from products.utils.orders import get_current_draft_order
 
 
 class ProductViewSet(viewsets.ReadOnlyModelViewSet):
@@ -22,17 +28,6 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        queryset = queryset.annotate(
-            current_price=Case(
-                When(
-                    discount__isnull=False,
-                    discount__active=True,
-                    then=F("price") * (1 - F("discount__percent") / 100),
-                ),
-                default=F("price"),
-                output_field=DecimalField(),
-            )
-        )
         return queryset
 
 
@@ -47,26 +42,24 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.AllowAny]
 
 
-class OrderAPIView(APIView):
-    def post(self, request, *args, **kwargs):
-        session_id = request.session.session_key
-        if not session_id:
-            # Create a new session if it doesn't exist
-            request.session.create()
-            session_id = request.session.session_key
+class CartItemsViewSet(viewsets.ModelViewSet):
+    queryset = OrderItems.objects.all()
+    serializer_class = CartItemsSerializer
 
-        if not self.request.user.is_authenticated:
-            user = None
-        else:
-            user = self.request.user
+    def initiate_cart(self, request):
+        self.cart = get_current_draft_order(request)
 
-        # Use get_or_create to either retrieve an existing order for the user or create a new one
-        Order.objects.get_or_create(
-            session_id=session_id,
-            user=user,
-            status=Order.OrderStatus.DRAFT,
-            defaults={"total_amount": 0.0},
-        )
+    def get_queryset(self):
+        return OrderItems.objects.filter(order=self.cart)
 
-        # Return a response with only the status code
-        return Response(status=status.HTTP_201_CREATED)
+    def create(self, request, *args, **kwargs):
+        self.initiate_cart(request)
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(order=self.cart)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def list(self, request, *args, **kwargs):
+        self.initiate_cart(request)
+        return super().list(request, *args, **kwargs)
