@@ -11,7 +11,6 @@ def get_current_draft_order(request):
         order, created = Order.objects.get_or_create(
             session_id=session_id,
             status=Order.OrderStatus.DRAFT,
-            defaults={"total_amount": 0.0},
         )
     else:
         user = request.user
