@@ -113,3 +113,4 @@ class OrderItems(models.Model):
 
     class Meta:
         verbose_name_plural = "Order Items"
+        unique_together = ('order', 'product')
