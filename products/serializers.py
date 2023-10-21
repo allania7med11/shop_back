@@ -39,7 +39,6 @@ class ProductSerializer(serializers.HyperlinkedModelSerializer):
     current_price = serializers.ReadOnlyField()
     files = FileSerializer(many=True)
     description_html = serializers.SerializerMethodField()
-    
 
     def get_description_html(self, instance: Product):
         return str(instance.description.html)

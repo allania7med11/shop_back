@@ -12,7 +12,7 @@ from rest_framework import permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
-from products.utils.orders import get_current_draft_order
+from products.utils.orders import get_current_draft_order, get_existing_or_new_order_item
 
 
 class ProductViewSet(viewsets.ReadOnlyModelViewSet):
@@ -54,12 +54,13 @@ class CartItemsViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         self.initiate_cart(request)
-        serializer = self.get_serializer(data=request.data)
+        instance = get_existing_or_new_order_item(self.cart, request.data["product"])
+        serializer = self.get_serializer(data=request.data, instance=instance)
         if serializer.is_valid():
-            serializer.save(order=self.cart)
+            serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
     def list(self, request, *args, **kwargs):
         self.initiate_cart(request)
         return super().list(request, *args, **kwargs)
