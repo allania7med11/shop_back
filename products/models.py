@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.validators import MinValueValidator
 from cloudinary.models import CloudinaryField
 from djmoney.models.fields import MoneyField
 from django_quill.fields import QuillField
@@ -105,7 +106,8 @@ class Order(models.Model):
 class OrderItems(models.Model):
     order = models.ForeignKey('Order', on_delete=models.CASCADE)  
     product = models.ForeignKey('Product', on_delete=models.PROTECT)  
-    quantity = models.PositiveIntegerField()
+    quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)]
+)
     subtotal = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
 
     def __str__(self):
