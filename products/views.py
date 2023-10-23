@@ -13,7 +13,7 @@ from rest_framework import permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
-from products.utils.orders import get_current_draft_order, get_existing_or_new_order_item
+from products.utils.orders import  get_existing_or_new_order_item
 
 
 class ProductViewSet(viewsets.ReadOnlyModelViewSet):
@@ -28,7 +28,7 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        queryset = super().get_queryset().with_current_price()
         return queryset
 
 

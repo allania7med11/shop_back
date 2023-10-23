@@ -4,11 +4,13 @@ from django.core.validators import MinValueValidator
 from cloudinary.models import CloudinaryField
 from djmoney.models.fields import MoneyField
 from django_quill.fields import QuillField
+from products.managers import ProductManager
 
 from products.utils.slugify import unique_slugify
 
 
 class Product(models.Model):
+    objects = ProductManager()
     name = models.CharField("Product Name", max_length=250)
     slug = models.SlugField("Slug", max_length=100, unique=True, null=True, editable=False)
     price = MoneyField(max_digits=19, decimal_places=4, default_currency="USD")
@@ -32,12 +34,6 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
-    
-    @property
-    def current_price(self) -> float:
-        if self.discount and self.discount.active:
-            return self.price.amount * (1 - self.discount.percent / 100)
-        return self.price.amount
     
     def save(self, **kwargs):
         unique_slugify(self, self.name) 
