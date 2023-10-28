@@ -22,4 +22,4 @@ class ProductManager(models.Manager):
         return ProductQuerySet(
             model=self.model,
             using=self._db,
-        )
+        ).with_current_price()

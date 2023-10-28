@@ -27,9 +27,6 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     lookup_field = "slug"
     permission_classes = [permissions.AllowAny]
 
-    def get_queryset(self):
-        queryset = super().get_queryset().with_current_price()
-        return queryset
 
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
