@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 
 class Command(BaseCommand):
     def handle(self, *args, **options):
-        User.all_objects.update(password=make_password("shopadmin"))
+        User.objects.all().update(password=make_password("shopadmin"))
         self.stdout.write(
             "------- Pearl users updated to password : shopadmin---------"
         )
