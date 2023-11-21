@@ -1,12 +1,16 @@
 from django.db import models
+from django.contrib.auth.models import User
+from django.core.validators import MinValueValidator
 from cloudinary.models import CloudinaryField
 from djmoney.models.fields import MoneyField
 from django_quill.fields import QuillField
+from products.managers import ProductManager
 
 from products.utils.slugify import unique_slugify
 
 
 class Product(models.Model):
+    objects = ProductManager()
     name = models.CharField("Product Name", max_length=250)
     slug = models.SlugField("Slug", max_length=100, unique=True, null=True, editable=False)
     price = MoneyField(max_digits=19, decimal_places=4, default_currency="USD")
@@ -30,6 +34,7 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
+    
     def save(self, **kwargs):
         unique_slugify(self, self.name) 
         super(Product, self).save(**kwargs)
@@ -70,3 +75,40 @@ class Category(models.Model):
     def save(self, **kwargs):
         unique_slugify(self, self.name) 
         super(Category, self).save(**kwargs)
+
+class Order(models.Model):
+    DRAFT = 'draft'
+    PROCESSING = 'processing'
+    SHIPPED = 'shipped'
+    DELIVERED = 'delivered'
+    CANCELED = 'canceled'
+
+    class OrderStatus(models.TextChoices):
+        DRAFT = 'draft', 'Draft'
+        PROCESSING = 'processing', 'Processing'
+        SHIPPED = 'shipped', 'Shipped'
+        DELIVERED = 'delivered', 'Delivered'
+        CANCELED = 'canceled', 'Canceled'
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)  
+    session_id = models.CharField(max_length=255, blank=True, null=True)  # Store the session ID for non-logged-in users
+    order_date = models.DateTimeField(auto_now_add=True)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    status = models.CharField(max_length=50, choices=OrderStatus.choices, default=OrderStatus.DRAFT)
+
+    def __str__(self):
+        return f"Order #{self.id} ({self.get_status_display()})"
+
+class OrderItems(models.Model):
+    order = models.ForeignKey('Order', on_delete=models.CASCADE)  
+    product = models.ForeignKey('Product', on_delete=models.PROTECT)  
+    quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)]
+)
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.quantity} x {self.product}"
+
+    class Meta:
+        verbose_name_plural = "Order Items"
+        unique_together = ('order', 'product')

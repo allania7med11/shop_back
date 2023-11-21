@@ -1,5 +1,6 @@
 data
 static
+.vscode
 # Django #
 *.log
 *.pot

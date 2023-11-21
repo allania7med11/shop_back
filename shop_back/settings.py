@@ -33,6 +33,7 @@ SECRET_KEY = env(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool("DJANGO_DEBUG", default=True)
 CORS_ALLOW_ALL_ORIGINS=env.bool("DJANGO_CORS_ALLOW_ALL_ORIGINS", default=False)
+CORS_ALLOW_CREDENTIALS =env.bool("DJANGO_CORS_ALLOW_CREDENTIALS", default=False)
 
 ALLOWED_HOSTS = env.list(
     "DJANGO_ALLOWED_HOSTS", default=["*"]
@@ -155,7 +156,6 @@ CLOUDINARY = {
     "api_secret": env("CLOUDINARY_API_SECRET", default=""),
     "secure": True,
 }
-CORS_ORIGIN_ALLOW_ALL = True
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
