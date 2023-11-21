@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from products.models import Category, Product, File, Discount
+from products.models import Category, OrderItems, Product, File, Discount
 
 
 class DiscountSerializer(serializers.ModelSerializer):
@@ -19,6 +19,7 @@ class FileSerializer(serializers.ModelSerializer):
     def get_url(self, obj):
         return obj.get_url()
 
+
 class CategoryProductSerializer(serializers.HyperlinkedModelSerializer):
     url = serializers.HyperlinkedIdentityField(
         view_name="category-detail", lookup_field="slug"
@@ -28,27 +29,20 @@ class CategoryProductSerializer(serializers.HyperlinkedModelSerializer):
         model = Category
         fields = ["url", "slug", "id", "name"]
 
+
 class ProductSerializer(serializers.HyperlinkedModelSerializer):
     url = serializers.HyperlinkedIdentityField(
         view_name="product-detail", lookup_field="slug"
     )
     category = CategoryProductSerializer(read_only=True)
     discount = DiscountSerializer()
-    current_price = serializers.SerializerMethodField()
+    current_price = serializers.ReadOnlyField()
     files = FileSerializer(many=True)
     description_html = serializers.SerializerMethodField()
 
-    def get_current_price(self, obj):
-        current_price = getattr(obj,"current_price",None)
-        if current_price: 
-            return current_price 
-        if obj.discount and obj.discount.active:
-            return obj.price.amount * (1 - obj.discount.percent / 100)
-        return obj.price.amount
-
     def get_description_html(self, instance: Product):
         return str(instance.description.html)
-    
+
     class Meta:
         model = Product
         fields = [
@@ -63,7 +57,7 @@ class ProductSerializer(serializers.HyperlinkedModelSerializer):
             "current_price",
             "category",
             "description_html",
-            "updated_at"
+            "updated_at",
         ]
 
 
@@ -76,3 +70,9 @@ class CategorySerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Category
         fields = ["url", "slug", "id", "name", "products"]
+
+
+class CartItemsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderItems
+        fields = ["id", "product", "quantity"]
