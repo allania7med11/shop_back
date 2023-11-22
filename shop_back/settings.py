@@ -14,12 +14,14 @@ import environ
 from pathlib import Path
 from django.core.management.utils import get_random_secret_key
 
-env = environ.Env()
-env.read_env()
 
-VERSION = "1.1.1"
+
+VERSION = "1.2"
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+env = environ.Env()
+env.read_env(os.path.join(BASE_DIR, '.env'))
 
 
 # Quick-start development settings - unsuitable for production
@@ -156,6 +158,7 @@ CLOUDINARY = {
     "api_secret": env("CLOUDINARY_API_SECRET", default=""),
     "secure": True,
 }
+print("CLOUDINARY", CLOUDINARY)
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
