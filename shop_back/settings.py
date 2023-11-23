@@ -158,7 +158,6 @@ CLOUDINARY = {
     "api_secret": env("CLOUDINARY_API_SECRET", default=""),
     "secure": True,
 }
-print("CLOUDINARY", CLOUDINARY)
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
