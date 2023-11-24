@@ -42,7 +42,7 @@ ALLOWED_HOSTS = env.list(
 )
 
 CSRF_TRUSTED_ORIGINS = env.list(
-    "DJANGO_CSRF_TRUSTED_ORIGINS", default=["*"]
+    "DJANGO_CSRF_TRUSTED_ORIGINS", default=[]
 )
 
 
