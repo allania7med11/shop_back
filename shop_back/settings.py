@@ -62,6 +62,8 @@ INSTALLED_APPS = [
     "django_filters",
     "django_quill",
     "rest_framework",
+    "rest_framework.authtoken",
+    "dj_rest_auth",
     "corsheaders",
     "cloudinary",
     "djmoney",
@@ -71,9 +73,11 @@ INSTALLED_APPS = [
     # LOCAL APPS
     "core",
     "products",
+    "api"
 ]
 
 MIDDLEWARE = [
+    "api.middlewares.CsrfExemptMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -181,5 +185,9 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 
 REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.TokenAuthentication',
+        # other authentication classes if needed
+    ),
     "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"]
 }
