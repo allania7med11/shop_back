@@ -1,7 +1,6 @@
-from django.db.models import F, Case, When, DecimalField
 from rest_framework import viewsets
 from products.filters import ProductFilter
-from products.mixins import CartInitiationMixin
+from products.mixins import CartInitiationMixin, GuestMixin
 from products.models import Category, OrderItems, Product
 
 from products.serializers import (
@@ -42,7 +41,7 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 
-class CartItemsViewSet(CartInitiationMixin, viewsets.ModelViewSet):
+class CartItemsViewSet(GuestMixin, CartInitiationMixin, viewsets.ModelViewSet):
     queryset = OrderItems.objects.all()
     serializer_class = CartItemsSerializer
 

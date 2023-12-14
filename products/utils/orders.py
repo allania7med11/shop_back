@@ -1,21 +1,15 @@
+import uuid
 from products.models import Order, OrderItems
 
 
-def get_current_draft_order(request):
-    if not request.user.is_authenticated:
-        session_id = request.session.session_key
-        if not session_id:
-            # Create a new session if it doesn't exist
-            request.session.create()
-            session_id = request.session.session_key
+def get_current_draft_order(guest, user):
+    if not user or not user.is_authenticated:
         order, created = Order.objects.get_or_create(
-            session_id=session_id,
+            guest=guest,
             status=Order.OrderStatus.DRAFT,
         )
     else:
-        user = request.user
         order, created = Order.objects.get_or_create(
-            session_id=session_id,
             user=user,
             status=Order.OrderStatus.DRAFT,
             defaults={"total_amount": 0.0},

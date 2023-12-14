@@ -4,6 +4,7 @@ from django.core.validators import MinValueValidator
 from cloudinary.models import CloudinaryField
 from djmoney.models.fields import MoneyField
 from django_quill.fields import QuillField
+from core.models import Guest
 from products.managers import ProductManager
 
 from products.utils.slugify import unique_slugify
@@ -91,7 +92,7 @@ class Order(models.Model):
         CANCELED = 'canceled', 'Canceled'
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)  
-    session_id = models.CharField(max_length=255, blank=True, null=True)  # Store the session ID for non-logged-in users
+    guest = models.ForeignKey(Guest, on_delete=models.SET_NULL, null=True, blank=True)
     order_date = models.DateTimeField(auto_now_add=True)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     status = models.CharField(max_length=50, choices=OrderStatus.choices, default=OrderStatus.DRAFT)
