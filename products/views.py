@@ -1,6 +1,5 @@
 from rest_framework import viewsets
 from products.filters import ProductFilter
-from products.mixins import CartInitiationMixin, GuestMixin
 from products.models import Category, OrderItems, Product
 
 from products.serializers import (
@@ -9,10 +8,9 @@ from products.serializers import (
     ProductSerializer,
 )
 from rest_framework import permissions, status
-from rest_framework.views import APIView
 from rest_framework.response import Response
-
-from products.utils.orders import  get_existing_or_new_order_item
+from rest_framework.exceptions import PermissionDenied
+from products.utils.orders import  get_current_draft_order, get_existing_or_new_order_item
 
 
 class ProductViewSet(viewsets.ReadOnlyModelViewSet):
@@ -41,11 +39,15 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 
-class CartItemsViewSet(GuestMixin, CartInitiationMixin, viewsets.ModelViewSet):
+class CartItemsViewSet(viewsets.ModelViewSet):
     queryset = OrderItems.objects.all()
     serializer_class = CartItemsSerializer
-
+    
+    
     def get_queryset(self):
+        self.cart = get_current_draft_order(self.request.user, self.request.GET.get('guest_id'))
+        if not self.cart:
+            raise PermissionDenied("Cart not found.")
         return OrderItems.objects.filter(order=self.cart)
 
     def create(self, request, *args, **kwargs):

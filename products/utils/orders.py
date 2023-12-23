@@ -1,19 +1,22 @@
-import uuid
+from core.models import Guest
 from products.models import Order, OrderItems
 
 
-def get_current_draft_order(guest, user):
-    if not user or not user.is_authenticated:
-        order, created = Order.objects.get_or_create(
-            guest=guest,
-            status=Order.OrderStatus.DRAFT,
-        )
-    else:
+def get_current_draft_order(user, guest_id=None):
+    order = None
+    if user and user.is_authenticated:
         order, created = Order.objects.get_or_create(
             user=user,
             status=Order.OrderStatus.DRAFT,
             defaults={"total_amount": 0.0},
         )
+    elif guest_id:
+        guest = Guest.objects.filter(guest_id=guest_id).first() 
+        if guest:
+            order, created = Order.objects.get_or_create(
+                guest=guest,
+                status=Order.OrderStatus.DRAFT,
+            )
     return order
 
 
