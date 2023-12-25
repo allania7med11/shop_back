@@ -10,5 +10,5 @@ router.register(r"cart_items", CartItemsViewSet)
 
 urlpatterns = [
     path("", include(router.urls)),
-    path("auth/", include("api.base.urls.auth")),
+    path("auth/", include("authentication.urls")),
 ]

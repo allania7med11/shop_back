@@ -62,14 +62,18 @@ INSTALLED_APPS = [
     "django_filters",
     'django_quill',
     "rest_framework",
+    "rest_framework.authtoken",
     "corsheaders",
     "cloudinary",
     "djmoney",
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
+    "dj_rest_auth.registration",
     # LOCAL APPS
     "core",
+    "api",
+    "authentication",
     "products",
 ]
 
@@ -186,3 +190,4 @@ REST_FRAMEWORK = {
 
 ACCOUNT_AUTHENTICATION_METHOD = "email"
 ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
