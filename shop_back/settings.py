@@ -34,10 +34,18 @@ SECRET_KEY = env(
 DEBUG = env.bool("DJANGO_DEBUG", default=True)
 CORS_ALLOW_ALL_ORIGINS=env.bool("DJANGO_CORS_ALLOW_ALL_ORIGINS", default=False)
 CORS_ALLOW_CREDENTIALS =env.bool("DJANGO_CORS_ALLOW_CREDENTIALS", default=False)
+CSRF_TRUSTED_ORIGINS = ['http://localhost:5000']
 
 ALLOWED_HOSTS = env.list(
     "DJANGO_ALLOWED_HOSTS", default=["*"]
 )
+
+AUTHENTICATION_BACKENDS = [
+    # Needed to login by username in Django admin, regardless of `allauth`
+    "django.contrib.auth.backends.ModelBackend",
+    # `allauth` specific authentication methods, such as login by email
+    "allauth.account.auth_backends.AuthenticationBackend",
+]
 
 
 
@@ -54,10 +62,18 @@ INSTALLED_APPS = [
     "django_filters",
     'django_quill',
     "rest_framework",
+    "rest_framework.authtoken",
     "corsheaders",
     "cloudinary",
     "djmoney",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "dj_rest_auth.registration",
+    # LOCAL APPS
     "core",
+    "api",
+    "authentication",
     "products",
 ]
 
@@ -70,7 +86,9 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
 ]
+
 
 ROOT_URLCONF = "shop_back.urls"
 
@@ -161,5 +179,21 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 
 REST_FRAMEWORK = {
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend']
 }
+
+REST_AUTH = {
+    "REGISTER_SERIALIZER": "authentication.serializers.RegisterSerializer"
+}
+
+ACCOUNT_AUTHENTICATION_METHOD = "email"
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_EMAIL_VERIFICATION = "none"
+EMAIL_VERIFICATION = "none"
