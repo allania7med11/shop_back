@@ -99,12 +99,14 @@ class Order(models.Model):
 
     def __str__(self):
         return f"Order #{self.id} ({self.get_status_display()})"
+    
+    def is_draft(self):
+        return self.status == self.OrderStatus.DRAFT
 
 class OrderItems(models.Model):
-    order = models.ForeignKey('Order', on_delete=models.CASCADE)  
+    order = models.ForeignKey('Order', on_delete=models.CASCADE, related_name='items')  
     product = models.ForeignKey('Product', on_delete=models.PROTECT)  
-    quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)]
-)
+    quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     subtotal = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
 
     def __str__(self):

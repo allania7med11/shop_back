@@ -17,15 +17,21 @@ def get_current_draft_order(request):
         )
         return order
     user = request.user
+    user_order = Order.objects.filter(user=user,status=Order.OrderStatus.DRAFT).first()
     if session_order:
-        session_order.uuid = None
-        session_order.user = user
-        session_order.save()
-        return session_order
-    order, created = Order.objects.get_or_create(
+        if not user_order:
+            session_order.uuid = None
+            session_order.user = user
+            session_order.save()
+            return session_order
+        merge_orders(user_order, session_order)
+        session_order.delete()
+        return user_order
+    if user_order:
+        return user_order
+    order = Order.objects.create(
         user=user,
         status=Order.OrderStatus.DRAFT,
-        defaults={"total_amount": 0.0},
     )
     return order
 
@@ -49,4 +55,23 @@ def get_existing_or_new_order_item(order, product):
     if not instance:
         instance = OrderItems(order=order)
     return instance
-    
+
+def merge_orders(current_order: Order, other_order: Order):
+    # Check if both orders are in draft status
+    if not (current_order.is_draft() and other_order.is_draft()):
+        raise ValueError("Orders cannot be merged as both must be in draft status.")
+
+    # Merge order items
+    for item in other_order.items.all():
+        merge_order_item(current_order, item)
+
+def merge_order_item(current_order: Order, item: OrderItems):
+    existing_item: OrderItems = current_order.items.filter(product=item.product).first()
+    if existing_item:
+        # If the same product already exists in the current order, update the quantity and subtotal
+        existing_item.quantity += item.quantity
+        existing_item.save()
+    else:
+        # If the product does not exist in the current order, create a new order item
+        item.order = current_order
+        item.save()
