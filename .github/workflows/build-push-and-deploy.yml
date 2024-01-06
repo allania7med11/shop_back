@@ -53,7 +53,7 @@ jobs:
           target: ~/shop_back/
   
       - name: SSH into droplet and run Docker commands
-        uses: appleboy/ssh-action@v2
+        uses: appleboy/ssh-action@v1.0.2
         with:
           host: ${{ secrets.DEPLOY_IP_ADDRESS }}
           username: ${{ secrets.DEPLOY_USER }}
