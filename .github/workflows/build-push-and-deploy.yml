@@ -26,7 +26,6 @@ jobs:
         with:
           push: true
           tags: allania7med11/shop_back:latest
-
   deploy:
     needs: docker
     runs-on: ubuntu-latest
@@ -37,27 +36,28 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-
-      - name: Install SSH key
-        uses: webfactory/ssh-agent@v0.8.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
+  
       - name: Create shop_back directory
         run: mkdir -p ~/shop_back/
-
+  
       - name: Get the contents of .env secret
         run: echo "$ENV_FILE_CONTENTS" > ~/shop_back/.env
-
-
-
+  
       - name: Copy environment file to droplet
-        run: scp -o StrictHostKeyChecking=no -p ~/shop_back/.env $DEPLOY_USER@${DEPLOY_IP_ADDRESS}:~/shop_back/
-      
-
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.DEPLOY_IP_ADDRESS }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: ~/shop_back/.env
+          target: ~/shop_back/
+  
       - name: SSH into droplet and run Docker commands
-        run: |
-          ssh -o StrictHostKeyChecking=no $DEPLOY_USER@${DEPLOY_IP_ADDRESS} '
+        uses: appleboy/ssh-action@v2
+        with:
+          host: ${{ secrets.DEPLOY_IP_ADDRESS }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
             docker pull allania7med11/shop_back:latest
             docker run -d --network=host --env-file ~/shop_back/.env --restart unless-stopped allania7med11/shop_back:latest
-          '
