@@ -1,4 +1,4 @@
-name: ci
+name: build-push-action
 
 on:
   push:
@@ -26,4 +26,4 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           push: true
-          tags: user/app:latest
+          tags: allania7med11/structure_back:latest
