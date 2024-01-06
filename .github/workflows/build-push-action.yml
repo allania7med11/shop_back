@@ -26,4 +26,4 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           push: true
-          tags: allania7med11/structure_back:latest
+          tags: allania7med11/shop_back:latest
