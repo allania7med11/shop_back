@@ -1,0 +1,63 @@
+name: build-push-and-deploy
+
+on:
+  push:
+    branches:
+      - 'main'
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          push: true
+          tags: allania7med11/shop_back:latest
+
+  deploy:
+    needs: docker
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_IP_ADDRESS: ${{ secrets.DEPLOY_IP_ADDRESS }}
+      ENV_FILE_CONTENTS: ${{ secrets.ENV_FILE_CONTENTS }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.5.5
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Create shop_back directory
+        run: mkdir -p ~/shop_back/
+
+      - name: Get the contents of .env secret
+        run: echo "$ENV_FILE_CONTENTS" > ~/shop_back/.env
+
+
+
+      - name: Copy environment file to droplet
+        run: scp -o StrictHostKeyChecking=no -p ~/shop_back/.env $DEPLOY_USER@${DEPLOY_IP_ADDRESS}:~/shop_back/
+      
+
+      - name: SSH into droplet and run Docker commands
+        run: |
+          ssh -o StrictHostKeyChecking=no $DEPLOY_USER@${DEPLOY_IP_ADDRESS} '
+            docker pull allania7med11/shop_back:latest
+            docker run -d --network=host --env-file ~/shop_back/.env --restart unless-stopped allania7med11/shop_back:latest
+          '
