@@ -24,7 +24,8 @@ This project uses a `.env` file to configure its environment. You can create a `
 - `DJANGO_DEBUG`: Controls whether Django should run in debug mode (True/False).
 - `DJANGO_CORS_ALLOW_ALL_ORIGINS`: Allows cross-origin requests for development (True/False).
 - `DJANGO_SECRET_KEY`: Django application's secret key for security. Please keep this confidential.
-- `DJANGO_ALLOWED_HOSTS`: Configures allowed hosts for the Django application.
+- `DJANGO_ALLOWED_HOSTS`: Configures allowed hosts for the Django application (comma-separated).
+- `DJANGO_CSRF_TRUSTED_ORIGINS`: List of trusted origins for CSRF protection (comma-separated).
 - `DJANGO_CORS_ALLOW_CREDENTIALS`: Specifies whether to allow credentials for cross-origin requests (True/False).
 - `POSTGRES_NAME`: The name of the PostgreSQL database for the application.
 - `POSTGRES_USER`: The PostgreSQL database user.
