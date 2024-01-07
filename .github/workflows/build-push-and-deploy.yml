@@ -44,7 +44,7 @@ jobs:
         run: echo "$ENV_FILE_CONTENTS" > ~/shop_back/.env
   
       - name: Copy environment file to droplet
-        uses: uses: appleboy/scp-action@209e8c05e0492f6ed6fe8a22dfcaefb083c4cf35
+        uses: appleboy/scp-action@209e8c05e0492f6ed6fe8a22dfcaefb083c4cf35
         with:
           host: ${{ secrets.DEPLOY_IP_ADDRESS }}
           username: ${{ secrets.DEPLOY_USER }}
