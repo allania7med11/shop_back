@@ -42,6 +42,15 @@ jobs:
   
       - name: Get the contents of .env secret
         run: echo "$ENV_FILE_CONTENTS" > ~/shop_back/.env
+      
+      - name: Test connection
+        uses: appleboy/ssh-action@v1.0.2
+        with:
+          host: ${{ secrets.DEPLOY_IP_ADDRESS }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            echo "Connection test successful"
   
       - name: Copy environment file to Droplet
         uses: appleboy/ssh-action@v1.0.2
