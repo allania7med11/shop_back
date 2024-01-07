@@ -51,16 +51,17 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             echo "Connection test successful"
-  
-      - name: Copy environment file to droplet
-        uses: appleboy/scp-action@v0.1.7
+      
+      - name: Upload file via SSH
+        uses: nicklasfrahm/scp-action@main
         with:
+          direction: upload
           host: ${{ secrets.DEPLOY_IP_ADDRESS }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: ~/shop_back/.env
+          source: |
+            ~/shop_back/.env
           target: ~/shop_back/
-          debug: true 
   
       - name: SSH into droplet and run Docker commands
         uses: appleboy/ssh-action@v1.0.2
