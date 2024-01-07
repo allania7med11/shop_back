@@ -51,6 +51,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: ~/shop_back/.env
           target: ~/shop_back/
+          debug: true 
   
       - name: SSH into droplet and run Docker commands
         uses: appleboy/ssh-action@v1.0.2
