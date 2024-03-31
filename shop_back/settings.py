@@ -36,7 +36,9 @@ SECRET_KEY = env(
 DEBUG = env.bool("DJANGO_DEBUG", default=True)
 CORS_ALLOW_ALL_ORIGINS=env.bool("DJANGO_CORS_ALLOW_ALL_ORIGINS", default=False)
 CORS_ALLOW_CREDENTIALS =env.bool("DJANGO_CORS_ALLOW_CREDENTIALS", default=False)
-CSRF_TRUSTED_ORIGINS = ['http://localhost:5000']
+CSRF_TRUSTED_ORIGINS = env.list(
+    "DJANGO_CSRF_TRUSTED_ORIGINS", default=[]
+)
 
 ALLOWED_HOSTS = env.list(
     "DJANGO_ALLOWED_HOSTS", default=["*"]
@@ -48,10 +50,6 @@ AUTHENTICATION_BACKENDS = [
     # `allauth` specific authentication methods, such as login by email
     "allauth.account.auth_backends.AuthenticationBackend",
 ]
-
-CSRF_TRUSTED_ORIGINS = env.list(
-    "DJANGO_CSRF_TRUSTED_ORIGINS", default=[]
-)
 
 
 # Application definition
