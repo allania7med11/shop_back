@@ -1,10 +1,13 @@
 # For more information, please refer to https://aka.ms/vscode-docker-python
 FROM python:3.8-slim 
-# Install git
-RUN apt-get update && \
-    apt-get upgrade -y && \
-    apt-get install -y git
 
+ARG DEV_BUILD=False
+
+ENV DEV_BUILD=$DEV_BUILD
+
+RUN if [ "$DEV_BUILD" = "true" ]; then \
+        apt-get update && apt-get install -y curl git; \
+    fi
 EXPOSE 8000
 
 # Keeps Python from generating .pyc files in the container
@@ -26,7 +29,7 @@ COPY . /app
 
 # Creates a non-root user with an explicit UID and adds permission to access the /app folder
 # For more info, please refer to https://aka.ms/vscode-docker-python-configure-containers
-RUN adduser -u 5678 --disabled-password --gecos "" appuser 
+RUN adduser -u 1000 --disabled-password --gecos "" appuser
 RUN chown -R appuser /app
 USER appuser
 
