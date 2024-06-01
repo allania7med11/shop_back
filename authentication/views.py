@@ -10,6 +10,12 @@ from rest_framework.views import APIView
 
 
 
+def get_csrf(request):
+    # Ensure the CSRF token is set in the request
+    # get_token(request)
+    response = JsonResponse({"detail": "CSRF cookie set"})
+    return response
+
 
 @require_POST
 def login_view(request):
