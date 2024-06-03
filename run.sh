@@ -1,7 +1,12 @@
 #!/bin/sh
-echo "envs $ENVIRONMENT $PORT"
-python manage.py makemigrations
-python manage.py migrate 
+echo "ENVIRONMENT=$ENVIRONMENT"
+echo "MIGRATE=$MIGRATE"
+echo "COLLECTSTATIC=$COLLECTSTATIC"
+echo "PORT=$PORT"
+ 
+if [ "$MIGRATE" = "True" ]; then
+    python manage.py migrate
+fi
 if [ "$COLLECTSTATIC" = "True" ]; then
     python manage.py collectstatic --noinput && echo "Generation completed successfully"
 fi
