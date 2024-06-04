@@ -28,6 +28,7 @@ This project uses a `.env` file to configure its environment. You can create a `
 - `DJANGO_ALLOWED_HOSTS`: Configures allowed hosts for the Django application (comma-separated).
 - `DJANGO_CSRF_TRUSTED_ORIGINS`: List of trusted origins for CSRF protection (comma-separated).
 - `DJANGO_CORS_ALLOW_CREDENTIALS`: Specifies whether to allow credentials for cross-origin requests (True/False).
+- `DJANGO_DEFAULT_FROM_EMAIL`: Default email address used in the From: header of outgoing emails. This address can take any format valid in the chosen email sending protocol.
 - `POSTGRES_NAME`: The name of the PostgreSQL database for the application.
 - `POSTGRES_USER`: The PostgreSQL database user.
 - `POSTGRES_PASSWORD`: The password for the PostgreSQL user.
