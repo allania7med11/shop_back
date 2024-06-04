@@ -199,7 +199,8 @@ REST_FRAMEWORK = {
 }
 
 REST_AUTH = {
-    "REGISTER_SERIALIZER": "authentication.serializers.RegisterSerializer"
+    "REGISTER_SERIALIZER": "authentication.serializers.RegisterSerializer",
+    "PASSWORD_RESET_SERIALIZER": "authentication.serializers.PasswordResetSerializer",
 }
 
 ACCOUNT_AUTHENTICATION_METHOD = "email"

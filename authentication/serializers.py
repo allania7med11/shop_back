@@ -1,7 +1,9 @@
 from rest_framework import serializers
 from dj_rest_auth.registration.serializers import RegisterSerializer as DefaultRegisterSerializer
 from django.utils.translation import gettext_lazy as _
+from authentication.forms import AllAuthPasswordResetForm
 from authentication.utils import check_email_exist
+from dj_rest_auth.serializers import PasswordResetSerializer as DefaultPasswordResetSerializer
 
 class RegisterSerializer(DefaultRegisterSerializer):
     username = None
@@ -24,3 +26,8 @@ class RegisterSerializer(DefaultRegisterSerializer):
             "first_name": self.validated_data.get("first_name", ""),
             "last_name": self.validated_data.get("last_name", ""),
         }
+
+class PasswordResetSerializer(DefaultPasswordResetSerializer):
+    password_reset_form_class = AllAuthPasswordResetForm
+
+    
