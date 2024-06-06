@@ -20,8 +20,9 @@ This section provides information about the environment configuration for this p
 This project uses a `.env` file to configure its environment. You can create a `.env` file in the project root directory, and set the following environment variables:
 
 - `ENVIRONMENT`: Specifies the current environment (e.g., 'debug', 'dev', 'prod').
-- `PORT`: Defines the port on which the application will listen.
+- `MIGRATE`: Controls whether The container will run migrate upon instantiation.
 - `COLLECTSTATIC`: Controls whether The container will generate a static folder upon instantiation.
+- `PORT`: Defines the port on which the application will listen.
 - `DJANGO_DEBUG`: Controls whether Django should run in debug mode (True/False).
 - `DJANGO_CORS_ALLOW_ALL_ORIGINS`: Allows cross-origin requests for development (True/False).
 - `DJANGO_SECRET_KEY`: Django application's secret key for security. Please keep this confidential.
