@@ -36,6 +36,9 @@ This project uses a `.env` file to configure its environment. You can create a `
 - `CLOUDINARY_NAME`: The name of the Cloudinary cloud where media files will be stored.
 - `CLOUDINARY_API_KEY`: API key for Cloudinary.
 - `CLOUDINARY_API_SECRET`: API secret for Cloudinary.
+- `EMAIL_HOST_USER`: Your email address.
+- `EMAIL_HOST_PASSWORD`: Your Google App password. You need to enable 2-Step Verification on your Google account and create an App password. Use this generated app password here.
+
 
 
 Make sure to update these values to match your specific environment configuration. You can check .env.example for reference.
