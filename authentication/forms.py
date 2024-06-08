@@ -1,16 +1,15 @@
 from allauth.account.adapter import get_adapter
 from django.contrib.sites.shortcuts import get_current_site
-from django.utils.http import urlsafe_base64_encode
-from django.utils.encoding import force_bytes
-from django.contrib.auth.tokens import default_token_generator
 from dj_rest_auth.forms import AllAuthPasswordResetForm as DefaultAllAuthPasswordResetForm
+from allauth.account.utils import user_pk_to_url_str
+from allauth.account.forms import default_token_generator
 
 class AllAuthPasswordResetForm(DefaultAllAuthPasswordResetForm):
     def save(self, request, **kwargs):
         current_site = get_current_site(request)
         email_template_name = "authentication/password_reset_key"
         for user in self.users:
-            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            uid = user_pk_to_url_str(user)
             token = default_token_generator.make_token(user)
             protocol =  "https" if request.is_secure() else "http"
             context = {
