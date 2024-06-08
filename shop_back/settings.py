@@ -21,7 +21,7 @@ VERSION = "1.3.0+build20240529"
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 env = environ.Env()
-env.read_env(os.path.join(BASE_DIR, '.env'))
+env.read_env(os.path.join(BASE_DIR, ".env"))
 
 
 # Quick-start development settings - unsuitable for production
@@ -50,35 +50,43 @@ AUTHENTICATION_BACKENDS = [
     # `allauth` specific authentication methods, such as login by email
     "allauth.account.auth_backends.AuthenticationBackend",
 ]
+DEFAULT_FROM_EMAIL = env("DJANGO_DEFAULT_FROM_EMAIL", default="webmaster@localhost")
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    # Django Apps
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
-    "django.contrib.sessions",
     "django.contrib.messages",
+    "django.contrib.sessions",
+    "django.contrib.sites", 
     "django.contrib.staticfiles",
-    "django_extensions",
-    "django_filters",
-    'django_quill',
-    "rest_framework",
-    "rest_framework.authtoken",
-    "corsheaders",
-    "cloudinary",
-    "djmoney",
+
+    # Third-Party Apps
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
+    "cloudinary",
+    "corsheaders",
+    "django_extensions",
+    "django_filters",
+    "django_quill",
+    "dj_rest_auth",
     "dj_rest_auth.registration",
-    # LOCAL APPS
-    "core",
+    "djmoney",
+    "rest_framework",
+    "rest_framework.authtoken",
+
+    # Local Apps
     "api",
     "authentication",
+    "core",
     "products",
 ]
+
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
@@ -182,21 +190,29 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 
 REST_FRAMEWORK = {
-    'DEFAULT_RENDERER_CLASSES': [
-        'rest_framework.renderers.JSONRenderer',
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
     ],
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
     ],
-    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend']
+    "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"]
 }
 
 REST_AUTH = {
-    "REGISTER_SERIALIZER": "authentication.serializers.RegisterSerializer"
+    "REGISTER_SERIALIZER": "authentication.serializers.RegisterSerializer",
+    "PASSWORD_RESET_SERIALIZER": "authentication.serializers.PasswordResetSerializer",
 }
 
 ACCOUNT_AUTHENTICATION_METHOD = "email"
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_EMAIL_VERIFICATION = "none"
-EMAIL_VERIFICATION = "none"
+
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = env.str("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = env.str("EMAIL_HOST_PASSWORD", default="")
+
+SITE_ID = 1

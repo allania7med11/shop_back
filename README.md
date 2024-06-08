@@ -20,14 +20,16 @@ This section provides information about the environment configuration for this p
 This project uses a `.env` file to configure its environment. You can create a `.env` file in the project root directory, and set the following environment variables:
 
 - `ENVIRONMENT`: Specifies the current environment (e.g., 'debug', 'dev', 'prod').
-- `PORT`: Defines the port on which the application will listen.
+- `MIGRATE`: Controls whether The container will run migrate upon instantiation.
 - `COLLECTSTATIC`: Controls whether The container will generate a static folder upon instantiation.
+- `PORT`: Defines the port on which the application will listen.
 - `DJANGO_DEBUG`: Controls whether Django should run in debug mode (True/False).
 - `DJANGO_CORS_ALLOW_ALL_ORIGINS`: Allows cross-origin requests for development (True/False).
 - `DJANGO_SECRET_KEY`: Django application's secret key for security. Please keep this confidential.
 - `DJANGO_ALLOWED_HOSTS`: Configures allowed hosts for the Django application (comma-separated).
 - `DJANGO_CSRF_TRUSTED_ORIGINS`: List of trusted origins for CSRF protection (comma-separated).
 - `DJANGO_CORS_ALLOW_CREDENTIALS`: Specifies whether to allow credentials for cross-origin requests (True/False).
+- `DJANGO_DEFAULT_FROM_EMAIL`: Default email address used in the From: header of outgoing emails. This address can take any format valid in the chosen email sending protocol.
 - `POSTGRES_NAME`: The name of the PostgreSQL database for the application.
 - `POSTGRES_USER`: The PostgreSQL database user.
 - `POSTGRES_PASSWORD`: The password for the PostgreSQL user.
@@ -35,6 +37,9 @@ This project uses a `.env` file to configure its environment. You can create a `
 - `CLOUDINARY_NAME`: The name of the Cloudinary cloud where media files will be stored.
 - `CLOUDINARY_API_KEY`: API key for Cloudinary.
 - `CLOUDINARY_API_SECRET`: API secret for Cloudinary.
+- `EMAIL_HOST_USER`: Your email address.
+- `EMAIL_HOST_PASSWORD`: Your Google App password. You need to enable 2-Step Verification on your Google account and create an App password. Use this generated app password here.
+
 
 
 Make sure to update these values to match your specific environment configuration. You can check .env.example for reference.
