@@ -5,7 +5,7 @@ echo "COLLECTSTATIC=$COLLECTSTATIC"
 echo "PORT=$PORT"
  
 if [ "$MIGRATE" = "True" ]; then
-    python manage.py migrate socialaccount zero
+    python manage.py migrate
 fi
 if [ "$COLLECTSTATIC" = "True" ]; then
     python manage.py collectstatic --noinput && echo "Generation completed successfully"
