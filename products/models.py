@@ -104,13 +104,13 @@ class Order(models.Model):
         return self.status == self.OrderStatus.DRAFT
 
 class OrderAddress(models.Model):
-    order = models.OneToOneField(Order, on_delete=models.CASCADE, primary_key=True)
+    order = models.OneToOneField(Order, on_delete=models.CASCADE, unique=True)
     street = models.CharField(max_length=255)
     city = models.CharField(max_length=100)
     zip_code = models.CharField(max_length=20)
     country = models.CharField(max_length=100)
     phone = models.CharField(max_length=20)
-
+    
     def __str__(self):
         return f"Address for Order {self.order.id}"
 
