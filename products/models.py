@@ -102,7 +102,10 @@ class Order(models.Model):
     
     def is_draft(self):
         return self.status == self.OrderStatus.DRAFT
-
+    
+    def is_empty(self):
+        return not self.items.exists()
+    
 class OrderAddress(models.Model):
     order = models.OneToOneField(Order, on_delete=models.CASCADE, unique=True)
     street = models.CharField(max_length=255)
