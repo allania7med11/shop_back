@@ -106,6 +106,12 @@ class Order(models.Model):
     def is_empty(self):
         return not self.items.exists()
     
+    def set_total_amount(self):
+        total = sum(item.set_subtotal() for item in self.items.all())
+        self.total_amount = total
+        self.save()
+        return self.total_amount
+    
 class OrderAddress(models.Model):
     order = models.OneToOneField(Order, on_delete=models.CASCADE, unique=True)
     street = models.CharField(max_length=255)
@@ -125,6 +131,11 @@ class OrderItems(models.Model):
 
     def __str__(self):
         return f"{self.quantity} x {self.product}"
+    
+    def set_subtotal(self):
+        self.subtotal = self.product.price.amount  * self.quantity
+        self.save()
+        return self.subtotal
 
     class Meta:
         verbose_name_plural = "Order Items"
