@@ -40,6 +40,12 @@ class Product(models.Model):
         unique_slugify(self, self.name) 
         super(Product, self).save(**kwargs)
     
+    def get_discount_price(self):
+        if self.discount and self.discount.active:
+            discount_amount = self.price.amount * (self.discount.percent / 100)
+            return self.price.amount - discount_amount
+        return self.price.amount
+    
     class Meta:
         ordering = ["-updated_at"]
 
@@ -133,7 +139,7 @@ class OrderItems(models.Model):
         return f"{self.quantity} x {self.product}"
     
     def set_subtotal(self):
-        self.subtotal = self.product.price.amount  * self.quantity
+        self.subtotal = self.product.get_discount_price()  * self.quantity
         self.save()
         return self.subtotal
 
