@@ -41,7 +41,7 @@ class Product(models.Model):
         super(Product, self).save(**kwargs)
     
     class Meta:
-        ordering = ['-updated_at']
+        ordering = ["-updated_at"]
 
 
 class Discount(models.Model):
@@ -78,18 +78,18 @@ class Category(models.Model):
         super(Category, self).save(**kwargs)
 
 class Order(models.Model):
-    DRAFT = 'draft'
-    PROCESSING = 'processing'
-    SHIPPED = 'shipped'
-    DELIVERED = 'delivered'
-    CANCELED = 'canceled'
+    DRAFT = "draft"
+    PROCESSING = "processing"
+    SHIPPED = "shipped"
+    DELIVERED = "delivered"
+    CANCELED = "canceled"
 
     class OrderStatus(models.TextChoices):
-        DRAFT = 'draft', 'Draft'
-        PROCESSING = 'processing', 'Processing'
-        SHIPPED = 'shipped', 'Shipped'
-        DELIVERED = 'delivered', 'Delivered'
-        CANCELED = 'canceled', 'Canceled'
+        DRAFT = "draft", "Draft"
+        PROCESSING = "processing", "Processing"
+        SHIPPED = "shipped", "Shipped"
+        DELIVERED = "delivered", "Delivered"
+        CANCELED = "canceled", "Canceled"
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)  
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, null=True, blank=True)  # Store the session ID for non-logged-in users
@@ -102,10 +102,24 @@ class Order(models.Model):
     
     def is_draft(self):
         return self.status == self.OrderStatus.DRAFT
+    
+    def is_empty(self):
+        return not self.items.exists()
+    
+class OrderAddress(models.Model):
+    order = models.OneToOneField(Order, on_delete=models.CASCADE, unique=True)
+    street = models.CharField(max_length=255)
+    city = models.CharField(max_length=100)
+    zip_code = models.CharField(max_length=20)
+    country = models.CharField(max_length=100)
+    phone = models.CharField(max_length=20)
+    
+    def __str__(self):
+        return f"Address for Order {self.order.id}"
 
 class OrderItems(models.Model):
-    order = models.ForeignKey('Order', on_delete=models.CASCADE, related_name='items')  
-    product = models.ForeignKey('Product', on_delete=models.PROTECT)  
+    order = models.ForeignKey("Order", on_delete=models.CASCADE, related_name="items")  
+    product = models.ForeignKey("Product", on_delete=models.PROTECT)  
     quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     subtotal = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
 
@@ -114,4 +128,4 @@ class OrderItems(models.Model):
 
     class Meta:
         verbose_name_plural = "Order Items"
-        unique_together = ('order', 'product')
+        unique_together = ("order", "product")

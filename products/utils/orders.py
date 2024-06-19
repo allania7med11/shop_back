@@ -1,5 +1,5 @@
 import uuid
-from products.models import Order, OrderItems
+from products.models import Order, OrderAddress, OrderItems
 
 
 def get_current_draft_order(request):
@@ -75,3 +75,15 @@ def merge_order_item(current_order: Order, item: OrderItems):
         # If the product does not exist in the current order, create a new order item
         item.order = current_order
         item.save()
+
+def get_existing_or_new_order_address(order, address_data):
+    try:
+        address = OrderAddress.objects.get(order=order)
+    except OrderAddress.DoesNotExist:
+        address = OrderAddress(order=order, **address_data)
+    return address
+
+
+def set_order_to_processing(order: Order):
+    order.status = Order.PROCESSING
+    order.save()
