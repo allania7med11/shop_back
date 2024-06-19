@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django import forms
 from products.models import Order, OrderAddress, OrderItems, Product, Discount, File, Category
+from django.utils.html import format_html
+from django.urls import reverse
 
 admin.site.site_header = "Shoppingify Admin"
 admin.site.site_title = "Shoppingify Admin Portal"
@@ -52,8 +54,9 @@ class OrderItemsInline(admin.TabularInline):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ("id", "user", "order_date", "total_amount", "status")
-    readonly_fields = ("total_amount",)
+    list_display = ("id", "user_display", "order_date", "total_amount", "status")
+    readonly_fields = ("total_amount", "user_link", "user_email")
+    exclude = ("user",)
 
     inlines = [OrderAddressInline, OrderItemsInline]
 
@@ -65,4 +68,21 @@ class OrderAdmin(admin.ModelAdmin):
     def save_related(self, request, form, formsets, change):
         super().save_related(request, form, formsets, change)
         form.instance.set_total_amount()
+    
+    def user_display(self, obj: Order):
+        user = obj.user
+        full_name = f"{user.first_name} {user.last_name}".strip()
+        if full_name:
+            return full_name
+        return obj.user.email.split("@")[0]
+
+    def user_email(self, obj):
+        return obj.user.email
+    user_email.short_description = 'User Email'
+
+    def user_link(self, obj):
+        link = reverse("admin:auth_user_change", args=[obj.user.id])
+        full_name = self.user_display(obj)
+        return format_html('<a href="{}">{}</a>', link, full_name)
+    user_link.short_description = 'User'
 
