@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django import forms
 from products.models import Order, OrderAddress, OrderItems, Product, Discount, File, Category
 
 admin.site.site_header = "Shoppingify Admin"
@@ -17,30 +18,42 @@ class FileInline(admin.TabularInline):
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     list_display = ["name", "price","discount", "category","updated_at"]
-    list_filter = ('category',)
+    list_filter = ("category",)
     inlines = [
         FileInline,
     ]
-    search_fields = ['name', 'description']
+    search_fields = ["name", "description"]
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    fields = ['name']
+    fields = ["name"]
 
 
 class OrderAddressInline(admin.StackedInline):
     model = OrderAddress
     can_delete = False
-    verbose_name_plural = 'Order Address'
+    verbose_name_plural = "Order Address"
+
+class OrderItemsInlineForm(forms.ModelForm):
+    class Meta:
+        model = OrderItems
+        fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["subtotal"].widget.attrs["readonly"] = True
+        self.fields["subtotal"].widget.attrs["style"] = "pointer-events: none; background-color: #f0f0f0;"
 
 class OrderItemsInline(admin.TabularInline):
     model = OrderItems
+    form = OrderItemsInlineForm  
     extra = 1
-    verbose_name_plural = 'Order Items'
+    verbose_name_plural = "Order Items"
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'order_date', 'total_amount', 'status')
+    list_display = ("id", "user", "order_date", "total_amount", "status")
+    readonly_fields = ("total_amount",)
 
     inlines = [OrderAddressInline, OrderItemsInline]
 
