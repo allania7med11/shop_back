@@ -40,6 +40,12 @@ class Product(models.Model):
         unique_slugify(self, self.name) 
         super(Product, self).save(**kwargs)
     
+    def get_discount_price(self):
+        if self.discount and self.discount.active:
+            discount_amount = self.price.amount * (self.discount.percent / 100)
+            return self.price.amount - discount_amount
+        return self.price.amount
+    
     class Meta:
         ordering = ["-updated_at"]
 
@@ -106,6 +112,12 @@ class Order(models.Model):
     def is_empty(self):
         return not self.items.exists()
     
+    def set_total_amount(self):
+        total = sum(item.set_subtotal() for item in self.items.all())
+        self.total_amount = total
+        self.save()
+        return self.total_amount
+    
 class OrderAddress(models.Model):
     order = models.OneToOneField(Order, on_delete=models.CASCADE, unique=True)
     street = models.CharField(max_length=255)
@@ -125,6 +137,11 @@ class OrderItems(models.Model):
 
     def __str__(self):
         return f"{self.quantity} x {self.product}"
+    
+    def set_subtotal(self):
+        self.subtotal = self.product.get_discount_price()  * self.quantity
+        self.save()
+        return self.subtotal
 
     class Meta:
         verbose_name_plural = "Order Items"
