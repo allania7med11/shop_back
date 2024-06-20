@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from products.models import Category, OrderItems, Product, File, Discount
+from products.models import Category, OrderAddress, OrderItems, Product, File, Discount
 
 
 class DiscountSerializer(serializers.ModelSerializer):
@@ -76,3 +76,8 @@ class CartItemsSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderItems
         fields = ["id", "product", "quantity"]
+
+class CartAddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderAddress
+        fields = ['id', 'street', 'city', 'zip_code', 'country', 'phone']
