@@ -1,3 +1,8 @@
+# SHP-2806245
+- add env variables:
+    - STRIPE_SECRET_KEY
+    - STRIPE_PUBLISHABLE_KEY
+
 # SHP-18
 - add env variables:
     - CLOUDINARY_NAME

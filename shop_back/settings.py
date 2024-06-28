@@ -216,3 +216,7 @@ EMAIL_HOST_USER = env.str("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = env.str("EMAIL_HOST_PASSWORD", default="")
 
 SITE_ID = 1
+
+STRIPE_SECRET_KEY = env.str("STRIPE_SECRET_KEY", default="")
+STRIPE_PUBLISHABLE_KEY = env.str("STRIPE_PUBLISHABLE_KEY", default="")
+
