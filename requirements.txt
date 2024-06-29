@@ -30,3 +30,4 @@ sqlparse==0.4.2
 tomli==2.0.1
 urllib3==1.26.9
 zipp==3.8.0
+stripe==10.1.0
