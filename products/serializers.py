@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from products.models import Category, OrderAddress, OrderItems, Product, File, Discount
+from products.models import Category, Order, OrderAddress, OrderItems, Product, File, Discount
 
 
 class DiscountSerializer(serializers.ModelSerializer):
@@ -80,4 +80,33 @@ class CartItemsSerializer(serializers.ModelSerializer):
 class CartAddressSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderAddress
-        fields = ['id', 'street', 'city', 'zip_code', 'country', 'phone']
+        fields = ["id", "street", "city", "zip_code", "country", "phone"]
+
+
+class CartProductSerializer(serializers.HyperlinkedModelSerializer):
+    files = FileSerializer(many=True)
+
+    class Meta:
+        model = Product
+        fields = [
+            "name",
+            "files",
+        ]
+
+
+class CartItemReadSerializer(serializers.ModelSerializer):
+    product = CartProductSerializer(read_only=True)
+    class Meta:
+        model = OrderItems
+        fields = ["id", "product", "quantity", "subtotal"]
+
+
+
+class CartSerializer(serializers.ModelSerializer):
+    items = CartItemReadSerializer(many=True, read_only=True)
+    address = CartAddressSerializer(read_only=True)
+    
+    class Meta:
+        model = Order
+        fields = ["total_amount", "items", "address"]
+        read_only_fields = fields

@@ -1,11 +1,12 @@
 from rest_framework import viewsets
 from products.filters import ProductFilter
 from products.mixins import CartInitiationMixin
-from products.models import Category, OrderAddress, OrderItems, Product
+from products.models import Category, Order, OrderAddress, OrderItems, Product
 
 from products.serializers import (
     CartAddressSerializer,
     CartItemsSerializer,
+    CartSerializer,
     CategorySerializer,
     ProductSerializer,
 )
@@ -14,6 +15,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
 from products.utils.orders import  get_existing_or_new_order_address, get_existing_or_new_order_item, set_order_to_processing
+from rest_framework.decorators import action
 
 
 class ProductViewSet(viewsets.ReadOnlyModelViewSet):
@@ -39,6 +41,27 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     lookup_field = "slug"
     permission_classes = [permissions.AllowAny]
     
+class CartViewSet(CartInitiationMixin, viewsets.ModelViewSet):
+    queryset = Order.objects.all()
+    serializer_class = CartSerializer
+
+    def get_queryset(self):
+        return Order.objects.filter(id=self.cart.id)
+    
+    @action(detail=False, methods=['get'])
+    def current(self, request):
+        cart = self.cart 
+        cart.set_total_amount()
+        serializer = self.get_serializer(cart)
+        return Response(serializer.data)
+
+    def create(self, request, *args, **kwargs):
+        instance = get_existing_or_new_order_item(self.cart, request.data["product"])
+        serializer = self.get_serializer(data=request.data, instance=instance)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 
@@ -57,7 +80,7 @@ class CartItemsViewSet(CartInitiationMixin, viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-class CardAddressViewSet(CartInitiationMixin, viewsets.ModelViewSet):
+class CartAddressViewSet(CartInitiationMixin, viewsets.ModelViewSet):
     queryset = OrderAddress.objects.all()
     serializer_class = CartAddressSerializer
     permission_classes = [IsAuthenticated]
