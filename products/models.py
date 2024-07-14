@@ -102,6 +102,8 @@ class Order(models.Model):
     order_date = models.DateTimeField(auto_now_add=True)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     status = models.CharField(max_length=50, choices=OrderStatus.choices, default=OrderStatus.DRAFT)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"Order #{self.id} ({self.get_status_display()})"
@@ -117,6 +119,27 @@ class Order(models.Model):
         self.total_amount = total
         self.save()
         return self.total_amount
+
+class Payment(models.Model):
+    PAYMENT_METHODS = [
+        ('stripe', 'Stripe'),
+        ('cash_on_delivery', 'Cash on Delivery'),
+    ]
+
+    PAYMENT_STATUS = [
+        ('pending', 'Pending'),
+        ('succeeded', 'Succeeded'),
+    ]
+
+    order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name='payment')
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHODS)
+    status = models.CharField(max_length=20, choices=PAYMENT_STATUS, default='pending')
+    external_id = models.CharField(max_length=255, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Payment for Order #{self.order.id}"
     
 class OrderAddress(models.Model):
     order = models.OneToOneField(Order, on_delete=models.CASCADE, unique=True)
