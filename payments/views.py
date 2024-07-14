@@ -29,7 +29,7 @@ def save_stripe_info(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body)
-            email = data["email"]
+            email = request.user.email
             payment_method_id = data["payment_method_id"]
         except (json.JSONDecodeError, KeyError) as e:
             return JsonResponse(
