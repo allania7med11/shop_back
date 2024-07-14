@@ -89,6 +89,7 @@ class CartProductSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Product
         fields = [
+            "slug",
             "id",
             "name",
             "files",
