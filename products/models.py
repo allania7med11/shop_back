@@ -121,14 +121,18 @@ class Order(models.Model):
         return self.total_amount
 
 class Payment(models.Model):
-    PAYMENT_METHODS = [
-        ('stripe', 'Stripe'),
-        ('cash_on_delivery', 'Cash on Delivery'),
-    ]
+    STRIPE = 'stripe'
+    CASH_ON_DELIVERY = 'cash_on_delivery'
 
+    PAYMENT_METHODS = [
+        (STRIPE, 'Stripe'),
+        (CASH_ON_DELIVERY, 'Cash on Delivery'),
+    ]
+    PENDING = "pending"
+    SUCCEEDED = "succeeded"
     PAYMENT_STATUS = [
-        ('pending', 'Pending'),
-        ('succeeded', 'Succeeded'),
+        (PENDING, 'Pending'),
+        (SUCCEEDED, 'Succeeded'),
     ]
 
     order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name='payment')
