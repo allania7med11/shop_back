@@ -146,7 +146,7 @@ class Payment(models.Model):
         return f"Payment for Order #{self.order.id}"
     
 class OrderAddress(models.Model):
-    order = models.OneToOneField(Order, on_delete=models.CASCADE, unique=True)
+    order = models.OneToOneField(Order, on_delete=models.CASCADE, unique=True, related_name="address")
     street = models.CharField(max_length=255)
     city = models.CharField(max_length=100)
     zip_code = models.CharField(max_length=20)
