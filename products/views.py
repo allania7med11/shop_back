@@ -56,8 +56,13 @@ class CartViewSet(CartInitiationMixin, viewsets.ModelViewSet):
         return Response(serializer.data)
 
     def create(self, request, *args, **kwargs):
-        instance = get_existing_or_new_order_item(self.cart, request.data["product"])
-        serializer = self.get_serializer(data=request.data, instance=instance)
+        order = self.cart 
+        if not order.user == self.request.user:
+            return Response({"detail": "Order not found for the current user."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if order.is_empty():
+            return Response({"detail": "Order cannot be empty."}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.get_serializer(data=request.data, instance=order)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)

@@ -140,7 +140,7 @@ class PaymentSerializer(serializers.ModelSerializer):
 
 class CartSerializer(serializers.ModelSerializer):
     items = CartItemReadSerializer(many=True, read_only=True)
-    address = CartAddressSerializer()  
+    address = CartAddressSerializer()
     payment = PaymentSerializer(write_only=True)
 
     class Meta:
@@ -150,50 +150,92 @@ class CartSerializer(serializers.ModelSerializer):
 
     def update(self, instance: Order, validated_data):
         instance.set_total_amount()
-        address_data = validated_data.get("address")    
-        address_serializer = CartAddressSerializer(instance.address, data=address_data)
+        address_data = validated_data.get("address")
+        address_instance = get_address_instance(instance)
+        address_serializer = CartAddressSerializer(address_instance, data=address_data)
         if address_serializer.is_valid(raise_exception=True):
             address_serializer.save()
         payment_data = validated_data.pop("payment", None)
-        if payment_data:
-            self.handle_payment(instance, payment_data)
-        instance.total_amount = validated_data.get("total_amount", instance.total_amount)
+        self.handle_payment(instance, payment_data)
+        instance.total_amount = validated_data.get(
+            "total_amount", instance.total_amount
+        )
         instance.save()
         return instance
 
     def handle_payment(self, instance: Order, payment_data):
-        payment_method = payment_data.get("payment_method")
-        email = self.context["request"].user.email
-        if payment_method == Payment.STRIPE:
-            email = self.context["request"].user.email
-            payment_method_id = payment_data.get("payment_method_id")
-            self.pay_with_stripe(email, instance, payment_method_id)
-        set_order_to_processing(instance)
+        payment_instance = get_payment_instance(instance)
+        payment_serializer = PaymentSerializer(payment_instance, data=payment_data)
+        if payment_serializer.is_valid(raise_exception=True):
+            payment_method = payment_data.get("payment_method")
+            if payment_method == Payment.STRIPE:
+                email = self.context["request"].user.email
+                payment_method_id = payment_data.get("payment_method_id")
+                self.pay_with_stripe(payment_instance, email, payment_method_id)
+            elif payment_method == Payment.CASH_ON_DELIVERY:
+                self.pay_cash_on_delivery(payment_instance)
 
 
-    def pay_with_stripe(self, email, order, payment_method_id):
+    def pay_with_stripe(self, payment_instance: Payment, email, payment_method_id):
+        order = payment_instance.order
         try:
             customer_data = stripe.Customer.list(email=email).data
-            customer = customer_data[0] if customer_data else stripe.Customer.create(
-                email=email, payment_method=payment_method_id
+            customer = (
+                customer_data[0]
+                if customer_data
+                else stripe.Customer.create(
+                    email=email, payment_method=payment_method_id
+                )
             )
             intent = stripe.PaymentIntent.create(
                 customer=customer.id,
                 payment_method=payment_method_id,
-                amount=order.total_amount,
+                amount=int(
+                    order.total_amount * 100
+                ),  # Convert to cents and ensure it's an integer
                 currency="usd",
                 confirm=True,
                 metadata={"order_id": order.id},
                 automatic_payment_methods={"enabled": True, "allow_redirects": "never"},
             )
             if intent.status == "succeeded":
-                order.payment.update(
-                    payment_method="stripe",
-                    external_id=intent["id"],
-                    status="succeeded"
-                )
+                payment_attrs = {
+                    "payment_method": "stripe",
+                    "external_id": intent["id"],
+                    "status": "succeeded",
+                }
+                set_multiple_attributes(payment_instance, payment_attrs)
+                payment_instance.save()
+                set_order_to_processing(order)
             else:
                 raise serializers.ValidationError("Failed to process payment.")
         except stripe.error.StripeError as e:
             raise serializers.ValidationError({"message": str(e)})
 
+    def pay_cash_on_delivery(self, payment_instance: Payment):
+        order = payment_instance.order
+        payment_attrs = {
+            "payment_method": "cash_on_delivery",
+        }
+        set_multiple_attributes(payment_instance, payment_attrs)
+        payment_instance.save()
+        set_order_to_processing(order)
+
+
+def get_address_instance(instance: Order):
+    address_instance = OrderAddress.objects.filter(order=instance).first()
+    if not address_instance:
+        address_instance = OrderAddress(order=instance)
+    return address_instance
+
+
+def get_payment_instance(instance: Order):
+    payment_instance = Payment.objects.filter(order=instance).first()
+    if not payment_instance:
+        payment_instance = Payment(order=instance)
+    return payment_instance
+
+
+def set_multiple_attributes(instance, attributes):
+    for attr, value in attributes.items():
+        setattr(instance, attr, value)
