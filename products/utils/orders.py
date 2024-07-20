@@ -1,5 +1,5 @@
 import uuid
-from products.models import Order, OrderAddress, OrderItems
+from products.models import Order, OrderAddress, OrderItems, Payment
 
 
 def get_current_draft_order(request):
@@ -87,4 +87,7 @@ def get_existing_or_new_order_address(order, address_data):
 def set_order_to_processing(order: Order):
     order.status = Order.PROCESSING
     order.save()
-    order.set_total_amount()
+
+def set_payment_to_succeeded(payment: Payment):
+    payment.status = Payment.SUCCEEDED
+    payment.save()
