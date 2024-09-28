@@ -4,12 +4,30 @@ FROM python:3.8-slim
 ARG DEV_BUILD=False
 ENV DEV_BUILD=$DEV_BUILD
 
-# Install system packages and virtualenv
-RUN apt-get update && apt-get install -y python3-venv libpq-dev gcc
+# Install system packages and set up locales
+RUN apt-get update && apt-get install -y \
+    locales \
+    libpq-dev \
+    gcc \
+    python3-venv && \
+    rm -rf /var/lib/apt/lists/*
+
+# Generate the locale for en_US.UTF-8
+RUN sed -i 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
+    locale-gen
+
+# Set environment variables for the locale
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
+
+# Create a non-root user with an explicit UID and adds permission to access the /app folder
+RUN adduser -u 1000 --disabled-password --gecos "" appuser
 
 # Install additional packages for development if DEV_BUILD is true
 RUN if [ "$DEV_BUILD" = "true" ]; then \
-        apt-get install -y curl git; \
+        apt-get update && apt-get install -y curl git sudo && \
+        echo "appuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers; \
     fi
 
 # Keeps Python from generating .pyc files in the container
@@ -35,9 +53,10 @@ RUN pip install -r requirements.txt
 WORKDIR /app
 COPY . /app
 
-# Creates a non-root user with an explicit UID and adds permission to access the /app folder
-RUN adduser -u 1000 --disabled-password --gecos "" appuser && \
-    chown -R appuser /app
+# Change ownership of the virtual environment and /app directory to the non-root user
+RUN chown -R appuser:appuser /opt/virtualenvs/production /app
+
+# Switch to the non-root user
 USER appuser
 
 # Expose the application port
