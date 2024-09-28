@@ -1,20 +1,18 @@
+import stripe
 from django.conf import settings
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
 
 from products.models import (
     Category,
+    Discount,
+    File,
     Order,
     OrderAddress,
     OrderItems,
     Payment,
     Product,
-    File,
-    Discount,
 )
-import stripe
-
-from products.utils.orders import set_order_to_processing, set_payment_to_succeeded
+from products.utils.orders import set_order_to_processing
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
@@ -175,7 +173,6 @@ class CartSerializer(serializers.ModelSerializer):
             elif payment_method == Payment.CASH_ON_DELIVERY:
                 self.pay_cash_on_delivery(payment_instance)
 
-
     def pay_with_stripe(self, payment_instance: Payment, email, payment_method_id):
         order = payment_instance.order
         try:
@@ -196,7 +193,10 @@ class CartSerializer(serializers.ModelSerializer):
                 currency="usd",
                 confirm=True,
                 metadata={"order_id": order.id},
-                automatic_payment_methods={"enabled": True, "allow_redirects": "never"},
+                automatic_payment_methods={
+                    "enabled": True,
+                    "allow_redirects": "never",
+                },
             )
             if intent.status == "succeeded":
                 payment_attrs = {

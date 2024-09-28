@@ -1,5 +1,12 @@
 from rest_framework import routers
-from .views import CartAddressViewSet, CartItemsViewSet, CartViewSet, CategoryViewSet, ProductViewSet
+
+from .views import (
+    CartAddressViewSet,
+    CartItemsViewSet,
+    CartViewSet,
+    CategoryViewSet,
+    ProductViewSet,
+)
 
 router = routers.DefaultRouter()
 router.register(r"categories", CategoryViewSet)
