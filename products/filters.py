@@ -17,9 +17,7 @@ class NumberInFilter(filters.BaseInFilter, filters.NumberFilter):
 
 class ProductFilter(filters.FilterSet):
     category = filters.CharFilter(field_name="category__slug")
-    search = filters.CharFilter(
-        method="filter_search", label="Search In Name/Description"
-    )
+    search = filters.CharFilter(method="filter_search", label="Search In Name/Description")
     current_price = filters.RangeFilter(label="Current Price")
     discount = DiscountFilter(field_name="discount__percent")
     id_in = NumberInFilter(field_name="id", lookup_expr="in")
@@ -37,6 +35,4 @@ class ProductFilter(filters.FilterSet):
     def filter_search(self, queryset, name, value):
         if not value:
             return queryset
-        return queryset.filter(
-            Q(name__icontains=value) | Q(description__icontains=value)
-        )
+        return queryset.filter(Q(name__icontains=value) | Q(description__icontains=value))

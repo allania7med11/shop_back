@@ -14,8 +14,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="product",
             name="description",
-            field=django_quill.fields.QuillField(
-                blank=True, null=True, verbose_name="Description"
-            ),
+            field=django_quill.fields.QuillField(blank=True, null=True, verbose_name="Description"),
         ),
     ]

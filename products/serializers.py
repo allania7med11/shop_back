@@ -35,9 +35,7 @@ class FileSerializer(serializers.ModelSerializer):
 
 
 class CategoryProductSerializer(serializers.HyperlinkedModelSerializer):
-    url = serializers.HyperlinkedIdentityField(
-        view_name="category-detail", lookup_field="slug"
-    )
+    url = serializers.HyperlinkedIdentityField(view_name="category-detail", lookup_field="slug")
 
     class Meta:
         model = Category
@@ -45,9 +43,7 @@ class CategoryProductSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class ProductSerializer(serializers.HyperlinkedModelSerializer):
-    url = serializers.HyperlinkedIdentityField(
-        view_name="product-detail", lookup_field="slug"
-    )
+    url = serializers.HyperlinkedIdentityField(view_name="product-detail", lookup_field="slug")
     category = CategoryProductSerializer(read_only=True)
     discount = DiscountSerializer()
     current_price = serializers.ReadOnlyField()
@@ -76,9 +72,7 @@ class ProductSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class CategorySerializer(serializers.HyperlinkedModelSerializer):
-    url = serializers.HyperlinkedIdentityField(
-        view_name="category-detail", lookup_field="slug"
-    )
+    url = serializers.HyperlinkedIdentityField(view_name="category-detail", lookup_field="slug")
     products = ProductSerializer(many=True, read_only=True)
 
     class Meta:
@@ -129,9 +123,7 @@ class PaymentSerializer(serializers.ModelSerializer):
     def validate(self, data):
         if data.get("payment_method") == "stripe" and not data.get("payment_method_id"):
             raise serializers.ValidationError(
-                {
-                    "payment_method_id": "This field is required when payment method is stripe."
-                }
+                {"payment_method_id": "This field is required when payment method is stripe."}
             )
         return data
 
@@ -155,9 +147,7 @@ class CartSerializer(serializers.ModelSerializer):
             address_serializer.save()
         payment_data = validated_data.pop("payment", None)
         self.handle_payment(instance, payment_data)
-        instance.total_amount = validated_data.get(
-            "total_amount", instance.total_amount
-        )
+        instance.total_amount = validated_data.get("total_amount", instance.total_amount)
         instance.save()
         return instance
 
@@ -180,16 +170,12 @@ class CartSerializer(serializers.ModelSerializer):
             customer = (
                 customer_data[0]
                 if customer_data
-                else stripe.Customer.create(
-                    email=email, payment_method=payment_method_id
-                )
+                else stripe.Customer.create(email=email, payment_method=payment_method_id)
             )
             intent = stripe.PaymentIntent.create(
                 customer=customer.id,
                 payment_method=payment_method_id,
-                amount=int(
-                    order.total_amount * 100
-                ),  # Convert to cents and ensure it's an integer
+                amount=int(order.total_amount * 100),  # Convert to cents and ensure it's an integer
                 currency="usd",
                 confirm=True,
                 metadata={"order_id": order.id},

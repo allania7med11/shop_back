@@ -464,9 +464,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "file",
-                    cloudinary.models.CloudinaryField(
-                        max_length=255, verbose_name="file"
-                    ),
+                    cloudinary.models.CloudinaryField(max_length=255, verbose_name="file"),
                 ),
                 (
                     "product",
