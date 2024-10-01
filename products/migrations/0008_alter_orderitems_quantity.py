@@ -7,13 +7,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('products', '0007_alter_orderitems_unique_together'),
+        ("products", "0007_alter_orderitems_unique_together"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='orderitems',
-            name='quantity',
-            field=models.PositiveIntegerField(validators=[django.core.validators.MinValueValidator(1)]),
+            model_name="orderitems",
+            name="quantity",
+            field=models.PositiveIntegerField(
+                validators=[django.core.validators.MinValueValidator(1)]
+            ),
         ),
     ]

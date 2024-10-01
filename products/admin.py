@@ -1,8 +1,9 @@
-from django.contrib import admin
 from django import forms
-from products.models import Order, OrderAddress, OrderItems, Product, Discount, File, Category
-from django.utils.html import format_html
+from django.contrib import admin
 from django.urls import reverse
+from django.utils.html import format_html
+
+from products.models import Category, Discount, File, Order, OrderAddress, OrderItems, Product
 
 admin.site.site_header = "Shoppingify Admin"
 admin.site.site_title = "Shoppingify Admin Portal"
@@ -19,12 +20,13 @@ class FileInline(admin.TabularInline):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ["name", "price","discount", "category","updated_at"]
+    list_display = ["name", "price", "discount", "category", "updated_at"]
     list_filter = ("category",)
     inlines = [
         FileInline,
     ]
     search_fields = ["name", "description"]
+
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
@@ -36,6 +38,7 @@ class OrderAddressInline(admin.StackedInline):
     can_delete = False
     verbose_name_plural = "Order Address"
 
+
 class OrderItemsInlineForm(forms.ModelForm):
     class Meta:
         model = OrderItems
@@ -44,17 +47,27 @@ class OrderItemsInlineForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["subtotal"].widget.attrs["readonly"] = True
-        self.fields["subtotal"].widget.attrs["style"] = "pointer-events: none; background-color: #f0f0f0;"
+        self.fields["subtotal"].widget.attrs[
+            "style"
+        ] = "pointer-events: none; background-color: #f0f0f0;"
+
 
 class OrderItemsInline(admin.TabularInline):
     model = OrderItems
-    form = OrderItemsInlineForm  
+    form = OrderItemsInlineForm
     extra = 1
     verbose_name_plural = "Order Items"
 
+
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ("id", "user_display", "order_date", "total_amount", "status")
+    list_display = (
+        "id",
+        "user_display",
+        "order_date",
+        "total_amount",
+        "status",
+    )
     readonly_fields = ("total_amount", "user_link", "user_email")
     exclude = ("user",)
 
@@ -63,12 +76,11 @@ class OrderAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.exclude(status=Order.OrderStatus.DRAFT)
-    
 
     def save_related(self, request, form, formsets, change):
         super().save_related(request, form, formsets, change)
         form.instance.set_total_amount()
-    
+
     def user_display(self, obj: Order):
         user = obj.user
         full_name = f"{user.first_name} {user.last_name}".strip()
@@ -78,11 +90,12 @@ class OrderAdmin(admin.ModelAdmin):
 
     def user_email(self, obj):
         return obj.user.email
-    user_email.short_description = 'User Email'
+
+    user_email.short_description = "User Email"
 
     def user_link(self, obj):
         link = reverse("admin:auth_user_change", args=[obj.user.id])
         full_name = self.user_display(obj)
         return format_html('<a href="{}">{}</a>', link, full_name)
-    user_link.short_description = 'User'
 
+    user_link.short_description = "User"

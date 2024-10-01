@@ -1,10 +1,11 @@
 import json
-from rest_framework import serializers
-from products.models import Category, Discount, Product, File
-from djmoney.money import Money
 
 import cloudinary
 import cloudinary.uploader
+from djmoney.money import Money
+from rest_framework import serializers
+
+from products.models import Category, Discount, File, Product
 
 
 class ProductMapSerializer(serializers.Serializer):
@@ -18,9 +19,7 @@ class ProductMapSerializer(serializers.Serializer):
     def validate_title(self, title):
         qs = Product.objects.filter(name=title)
         if len(qs) > 0:
-            raise serializers.ValidationError(
-                {"title": "Product with this name already exist"}
-            )
+            raise serializers.ValidationError({"title": "Product with this name already exist"})
         return title
 
     def create(self, validated_data):
@@ -36,9 +35,7 @@ class ProductMapSerializer(serializers.Serializer):
         )
         product = Product(
             name=validated_data["title"],
-            description=json.dumps(
-                {"delta": "", "html": validated_data["description"]}
-            ),
+            description=json.dumps({"delta": "", "html": validated_data["description"]}),
             price=Money(validated_data["price"], "USD"),
             discount=discount,
             category=category,

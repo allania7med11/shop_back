@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
-from core.management.commands.utils.runscripts.script import AppliedError, NotExecuteError, Script
 
+from core.management.commands.utils.runscripts.script import AppliedError, NotExecuteError, Script
 
 
 class Command(BaseCommand):
@@ -9,7 +9,7 @@ class Command(BaseCommand):
     scripts = [
         Script("add_products_from_dummyjson"),
         Script("add_products_from_api"),
-        Script("update_categories")
+        Script("update_categories"),
     ]
 
     def handle(self, *args, **options):
