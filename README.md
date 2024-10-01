@@ -41,6 +41,7 @@ This project uses a `.env` file to configure its environment. You can create a `
 - `EMAIL_HOST_PASSWORD`: Your Google App password. You need to enable 2-Step Verification on your Google account and create an App password. Use this generated app password here.
 - `STRIPE_PUBLISHABLE_KEY`: Your Stripe publishable key used for client-side requests.
 - `STRIPE_SECRET_KEY`: Your Stripe secret key used for server-side requests.
+- `SENTRY_DSN`: Your Sentry Data Source Name used for error tracking and monitoring in your application.
 
 
 
