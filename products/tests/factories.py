@@ -3,14 +3,15 @@
 import factory
 from django.utils.text import slugify
 from djmoney.money import Money
+from factory.django import DjangoModelFactory
 from faker import Faker
 
-from products.models import Category, Discount, Product
+from products.models import Category, Discount, Order, OrderAddress, OrderItems, Product
 
 fake = Faker()
 
 
-class DiscountFactory(factory.django.DjangoModelFactory):
+class DiscountFactory(DjangoModelFactory):
     class Meta:
         model = Discount
 
@@ -21,7 +22,7 @@ class DiscountFactory(factory.django.DjangoModelFactory):
     active = True
 
 
-class CategoryFactory(factory.django.DjangoModelFactory):
+class CategoryFactory(DjangoModelFactory):
     class Meta:
         model = Category
 
@@ -29,7 +30,7 @@ class CategoryFactory(factory.django.DjangoModelFactory):
     slug = factory.LazyAttribute(lambda o: slugify(o.name))
 
 
-class ProductFactory(factory.django.DjangoModelFactory):
+class ProductFactory(DjangoModelFactory):
     class Meta:
         model = Product
 
@@ -39,3 +40,29 @@ class ProductFactory(factory.django.DjangoModelFactory):
     )
     discount = factory.SubFactory(DiscountFactory)
     category = factory.SubFactory(CategoryFactory)
+
+
+class CartFactory(DjangoModelFactory):
+    class Meta:
+        model = Order
+
+
+class CartItemsFactory(DjangoModelFactory):
+    class Meta:
+        model = OrderItems
+
+    order = factory.SubFactory(CartFactory)
+    product = factory.SubFactory(ProductFactory)
+    quantity = factory.Faker("random_int", min=1, max=10)
+
+
+class CartAddressFactory(DjangoModelFactory):
+    class Meta:
+        model = OrderAddress
+
+    order = factory.SubFactory(CartFactory)
+    street = factory.Faker("street_address")
+    city = factory.Faker("city")
+    zip_code = factory.Faker("postcode")
+    country = factory.Faker("country")
+    phone = factory.Faker("phone_number")
