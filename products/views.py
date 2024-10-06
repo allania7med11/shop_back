@@ -21,10 +21,6 @@ from products.utils.orders import (
 
 
 class ProductViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    API endpoint that allows Products to be viewed or edited.
-    """
-
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     filter_class = ProductFilter
@@ -33,10 +29,6 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    API endpoint that allows Products to be viewed or edited.
-    """
-
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     lookup_field = "slug"
