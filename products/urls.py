@@ -8,6 +8,8 @@ from .views import (
     ProductViewSet,
 )
 
+app_name = "products"
+
 router = routers.DefaultRouter()
 router.register(r"categories", CategoryViewSet)
 router.register(r"products", ProductViewSet)
