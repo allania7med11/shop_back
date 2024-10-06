@@ -69,43 +69,36 @@ class TestCartViewSet:
         response = api_client.get(current_cart_url)
         assert response.status_code == status.HTTP_200_OK
 
-        # Get the initial cart's total amount
+        # Verify the initial cart's total amount is zero
         initial_total_amount = Money(response.data["total_amount"], "USD")
-        assert initial_total_amount == Money(0, "USD")  # Assuming the initial cart is empty
-
-        # Create discounts
-        discount_1 = DiscountFactory(percent=10)  # 10% discount
-        discount_2 = DiscountFactory(percent=20)  # 20% discount
+        assert initial_total_amount == Money(0, "USD")
 
         # Create products with discounts
+        discount_1 = DiscountFactory(percent=10)  # 10% discount
+        discount_2 = DiscountFactory(percent=20)  # 20% discount
         product_1 = ProductFactory(price=Money(50.00, "USD"), discount=discount_1)
-
         product_2 = ProductFactory(price=Money(20.00, "USD"), discount=discount_2)
 
-        # URL for the CartItemsViewSet
+        # Add products to the cart
         cart_items_url = reverse("products:cartitems-list")
+        products_to_add = [
+            {"product": product_1.id, "quantity": 2},
+            {"product": product_2.id, "quantity": 3},
+        ]
 
-        # Add the first product to the cart
-        response_1 = api_client.post(
-            cart_items_url, {"product": product_1.id, "quantity": 2}, format="json"
-        )
-        assert response_1.status_code == status.HTTP_201_CREATED
+        for product in products_to_add:
+            response = api_client.post(cart_items_url, product, format="json")
+            assert response.status_code == status.HTTP_201_CREATED
 
-        # Add the second product to the cart
-        response_2 = api_client.post(
-            cart_items_url, {"product": product_2.id, "quantity": 3}, format="json"
-        )
-        assert response_2.status_code == status.HTTP_201_CREATED
-
-        # Fetch the current cart again to check the updated total amount
+        # Fetch the updated cart to check the new total amount
         response = api_client.get(current_cart_url)
         assert response.status_code == status.HTTP_200_OK
 
         # Calculate the expected total amount after applying discounts
-        product_1_discounted_price = product_1.price - (product_1.price * discount_1.percent / 100)
-        product_2_discounted_price = product_2.price - (product_2.price * discount_2.percent / 100)
+        product_1_discounted_price = product_1.price * (1 - discount_1.percent / 100)
+        product_2_discounted_price = product_2.price * (1 - discount_2.percent / 100)
         expected_total_amount = (product_1_discounted_price * 2) + (product_2_discounted_price * 3)
-        updated_total_amount = Money(response.data["total_amount"], "USD")
 
-        # Verify that the total amount is updated correctly
+        # Verify the updated total amount
+        updated_total_amount = Money(response.data["total_amount"], "USD")
         assert updated_total_amount == expected_total_amount
