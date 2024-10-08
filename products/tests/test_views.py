@@ -129,24 +129,41 @@ class TestCartViewSet:
         assert updated_total_amount == constants["expected_total_amount"]
 
     def test_cart_owner_after_login(self, api_client, add_products_to_cart, create_user, constants):
+        """
+        Test that after a user logs in, the current cart becomes associated with that user
+        and the total amount is as expected.
+        """
+
         # Step 1: Get the current Cart (before authentication) and check that it has no user
         current_cart_url = reverse("products:cart-current")
         response = api_client.get(current_cart_url)
         assert response.status_code == 200
-        cart_data = response.json()
-        cart = Order.objects.get(id=cart_data["id"])
-        assert cart.user is None
+
+        cart_data = response.data  # Use response.data for consistency
+        cart_id_before_login = cart_data["id"]  # Store the cart ID before login
+
+        cart = Order.objects.get(id=cart_id_before_login)
+        assert cart.user is None, "Cart user should be None before login"
+
         # Step 2: Authenticate with a user
-        user = create_user
-        api_client.login(username=user.username, password="testpassword")
+        user = create_user  # Ensure this fixture creates a user with password 'testpassword'
+        login_successful = api_client.login(username=user.username, password="testpassword")
+        assert login_successful, "Login should be successful"
 
         # Step 3: Get the current Cart (after authentication) and
-        # check that it has current user and the expected total_amount
+        # verify it persists and has the correct user
         response = api_client.get(current_cart_url)
         assert response.status_code == 200
-        cart_data = response.json()
-        cart = Order.objects.get(id=cart_data["id"])
-        assert cart.user == user
-        cart_total_amount = Money(response.data["total_amount"], "USD")
-        expected_total_amount = constants["expected_total_amount"]
-        assert cart_total_amount == expected_total_amount
+
+        cart_data = response.data
+        cart_id_after_login = cart_data["id"]
+        assert cart_id_after_login == cart_id_before_login, "Cart ID should persist after login"
+
+        cart = Order.objects.get(id=cart_id_after_login)
+        assert cart.user == user, "Cart should be associated with the logged-in user"
+
+        # Step 4: Verify the total amount is as expected
+        cart_total_amount = Money(cart_data["total_amount"], "USD")
+        assert (
+            cart_total_amount == constants["expected_total_amount"]
+        ), "Cart total amount should match the expected amount"
