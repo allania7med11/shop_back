@@ -167,3 +167,63 @@ class TestCartViewSet:
         assert (
             cart_total_amount == constants["expected_total_amount"]
         ), "Cart total amount should match the expected amount"
+
+    def test_cart_checkout(
+        self, api_client, add_products_to_cart, create_user, constants, checkout_data
+    ):
+        """
+        Test that a user can successfully checkout the cart,
+        and the order status changes to 'processing' with the correct total amount.
+        """
+
+        # Step 1: Authenticate the user
+        user = create_user
+        login_successful = api_client.login(username=user.username, password="testpassword")
+        assert login_successful, "Login should be successful"
+
+        # Step 2: Get the current Order and
+        # Check Order is in 'draft' state and belongs to current user
+        current_cart_url = reverse("products:cart-current")
+        response = api_client.get(current_cart_url)
+        assert response.status_code == status.HTTP_200_OK
+        cart_data = response.data
+        cart_id = cart_data["id"]
+        cart = Order.objects.get(id=cart_id)
+        assert cart.status == "draft", "Cart should be in 'draft' status before checkout"
+        assert cart.user == user, "Cart should belong to the authenticated user"
+
+        # Step 3: Make POST request to CartViewSet with address and payment (cash_on_delivery)
+        # Verify that state is 'processing' and total_amount is expected_total_amount
+        # the address and payment are saved correctly
+        checkout_url = reverse(
+            "products:cart-list"
+        )  # Assuming 'cart-list' corresponds to the create method
+        response = api_client.post(checkout_url, data=checkout_data, format="json")
+        assert response.status_code == status.HTTP_201_CREATED, "Checkout should be successful"
+        cart.refresh_from_db()
+        assert cart.status == "processing", "Cart should be in 'processing' status after checkout"
+        cart_total_amount = Money(cart.total_amount, "USD")
+        assert (
+            cart_total_amount == constants["expected_total_amount"]
+        ), "Total amount should match expected total amount"
+        assert cart.address is not None, "Address should be associated with the cart"
+        for field in checkout_data["address"]:
+            expected_value = checkout_data["address"][field]
+            actual_value = getattr(cart.address, field)
+            assert actual_value == expected_value, f"Address field '{field}' should match"
+        assert cart.payment is not None, "Payment should be associated with the cart"
+        assert (
+            cart.payment.payment_method == "cash_on_delivery"
+        ), "Payment method should be 'cash_on_delivery'"
+        # Step 4: Get the current Order and
+        # Check Order is empty with new id
+        response = api_client.get(current_cart_url)
+        assert response.status_code == status.HTTP_200_OK
+        new_cart_data = response.data
+        new_cart_id = new_cart_data["id"]
+        assert new_cart_id != cart_id, "New cart should have a different ID after checkout"
+        assert new_cart_data["items"] == [], "New cart should be empty after checkout"
+        new_cart_total_amount = Money(new_cart_data["total_amount"], "USD")
+        assert new_cart_total_amount == Money(
+            0, "USD"
+        ), "New cart total amount should be zero after checkout"

@@ -43,6 +43,22 @@ def constants():
     }
 
 
+@pytest.fixture
+def address_data():
+    return {
+        "street": "123 Main St",
+        "city": "Anytown",
+        "zip_code": "12345",
+        "country": "USA",
+        "phone": "555-1234",
+    }
+
+
+@pytest.fixture
+def checkout_data(address_data):
+    return {"address": address_data, "payment": {"payment_method": "cash_on_delivery"}}
+
+
 # Updated fixture to create discounts using the new constants structure
 @pytest.fixture
 def create_discounts(constants):
