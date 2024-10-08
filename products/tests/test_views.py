@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
 from django.urls import reverse
 from djmoney.money import Money
@@ -168,21 +170,26 @@ class TestCartViewSet:
             cart_total_amount == constants["expected_total_amount"]
         ), "Cart total amount should match the expected amount"
 
+    @pytest.mark.parametrize("payment_method", ["cash_on_delivery", "stripe"])
     def test_cart_checkout(
-        self, api_client, add_products_to_cart, create_user, constants, checkout_data
+        self,
+        api_client,
+        add_products_to_cart,
+        create_user,
+        constants,
+        checkout_data,
+        payment_method,
     ):
         """
-        Test that a user can successfully checkout the cart,
+        Test that a user can successfully checkout the cart using different payment methods,
         and the order status changes to 'processing' with the correct total amount.
         """
-
         # Step 1: Authenticate the user
         user = create_user
         login_successful = api_client.login(username=user.username, password="testpassword")
         assert login_successful, "Login should be successful"
 
-        # Step 2: Get the current Order and
-        # Check Order is in 'draft' state and belongs to current user
+        # Step 2: Get the current Order and ensure it belongs to the user and is in 'draft' state
         current_cart_url = reverse("products:cart-current")
         response = api_client.get(current_cart_url)
         assert response.status_code == status.HTTP_200_OK
@@ -192,29 +199,77 @@ class TestCartViewSet:
         assert cart.status == "draft", "Cart should be in 'draft' status before checkout"
         assert cart.user == user, "Cart should belong to the authenticated user"
 
-        # Step 3: Make POST request to CartViewSet with address and payment (cash_on_delivery)
-        # Verify that state is 'processing' and total_amount is expected_total_amount
-        # the address and payment are saved correctly
-        checkout_url = reverse(
-            "products:cart-list"
-        )  # Assuming 'cart-list' corresponds to the create method
-        response = api_client.post(checkout_url, data=checkout_data, format="json")
-        assert response.status_code == status.HTTP_201_CREATED, "Checkout should be successful"
+        # Step 3: Prepare checkout data with the appropriate payment method
+        # Create a copy of checkout_data to avoid modifying the fixture
+        test_checkout_data = checkout_data.copy()
+        if payment_method == "stripe":
+            test_checkout_data["payment"] = {
+                "payment_method": "stripe",
+                "payment_method_id": "pm_mock_stripe_payment_method_id",
+            }
+        else:
+            test_checkout_data["payment"] = {"payment_method": "cash_on_delivery"}
+        if payment_method == "stripe":
+            with patch("stripe.Customer.create") as mock_customer_create, patch(
+                "stripe.Customer.list"
+            ) as mock_customer_list, patch(
+                "stripe.PaymentIntent.create"
+            ) as mock_payment_intent_create:
+
+                # Mock the customer list response to return no customers (simulate new customer)
+                mock_customer_list.return_value = MagicMock(data=[])
+
+                # Mock the customer creation
+                mock_customer = MagicMock()
+                mock_customer.id = "cus_mocked_customer_id"
+                mock_customer_create.return_value = mock_customer
+
+                # Mock the payment intent creation
+                mock_intent = MagicMock()
+                mock_intent.status = "succeeded"
+                mock_intent.id = "pi_mocked_intent_id"
+
+                # Ensure intent["id"] returns the correct value
+                mock_intent.__getitem__.return_value = "pi_mocked_intent_id"
+
+                mock_payment_intent_create.return_value = mock_intent
+
+                checkout_url = reverse("products:cart-list")
+                response = api_client.post(checkout_url, data=test_checkout_data, format="json")
+                assert (
+                    response.status_code == status.HTTP_201_CREATED
+                ), "Checkout should be successful"
+        else:
+            checkout_url = reverse("products:cart-list")
+            response = api_client.post(checkout_url, data=test_checkout_data, format="json")
+            assert response.status_code == status.HTTP_201_CREATED, "Checkout should be successful"
+
         cart.refresh_from_db()
         assert cart.status == "processing", "Cart should be in 'processing' status after checkout"
         cart_total_amount = Money(cart.total_amount, "USD")
         assert (
             cart_total_amount == constants["expected_total_amount"]
         ), "Total amount should match expected total amount"
+
+        # Step 8: Verify that the address fields match using a loop
         assert cart.address is not None, "Address should be associated with the cart"
-        for field in checkout_data["address"]:
-            expected_value = checkout_data["address"][field]
+        for field in test_checkout_data["address"]:
+            expected_value = test_checkout_data["address"][field]
             actual_value = getattr(cart.address, field)
             assert actual_value == expected_value, f"Address field '{field}' should match"
+
+        # Step 9: Verify the payment details
         assert cart.payment is not None, "Payment should be associated with the cart"
         assert (
-            cart.payment.payment_method == "cash_on_delivery"
-        ), "Payment method should be 'cash_on_delivery'"
+            cart.payment.payment_method == payment_method
+        ), f"Payment method should be '{payment_method}'"
+
+        if payment_method == "stripe":
+            assert cart.payment.status == "succeeded", "Payment status should be 'succeeded'"
+            assert (
+                cart.payment.external_id == "pi_mocked_intent_id"
+            ), "Payment external ID should match the mocked intent ID"
+
         # Step 4: Get the current Order and
         # Check Order is empty with new id
         response = api_client.get(current_cart_url)
