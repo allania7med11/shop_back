@@ -141,7 +141,7 @@ class CartSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ["total_amount", "items", "address", "payment"]
+        fields = ["id", "total_amount", "items", "address", "payment"]
         read_only_fields = ["items", "total_amount"]
 
     def update(self, instance: Order, validated_data):

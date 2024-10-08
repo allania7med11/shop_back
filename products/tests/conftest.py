@@ -1,4 +1,5 @@
 import pytest
+from django.contrib.auth.models import User
 from django.urls import reverse
 from djmoney.money import Money
 
@@ -81,3 +82,11 @@ def add_products_to_cart(api_client, create_products, constants):
         api_client.post(cart_items_url, product_data, format="json")
 
     return product_1, product_2
+
+
+@pytest.fixture
+def create_user():
+    # Create a test user with specific credentials
+    return User.objects.create_user(
+        username="testuser", email="testuser@example.com", password="testpassword"
+    )

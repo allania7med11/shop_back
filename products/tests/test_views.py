@@ -3,6 +3,7 @@ from django.urls import reverse
 from djmoney.money import Money
 from rest_framework import status
 
+from products.models import Order
 from products.tests.factories import CategoryFactory, ProductFactory
 
 
@@ -126,3 +127,26 @@ class TestCartViewSet:
         # Use the predefined expected total amount from constants
         updated_total_amount = Money(response.data["total_amount"], "USD")
         assert updated_total_amount == constants["expected_total_amount"]
+
+    def test_cart_owner_after_login(self, api_client, add_products_to_cart, create_user, constants):
+        # Step 1: Get the current Cart (before authentication) and check that it has no user
+        current_cart_url = reverse("products:cart-current")
+        response = api_client.get(current_cart_url)
+        assert response.status_code == 200
+        cart_data = response.json()
+        cart = Order.objects.get(id=cart_data["id"])
+        assert cart.user is None
+        # Step 2: Authenticate with a user
+        user = create_user
+        api_client.login(username=user.username, password="testpassword")
+
+        # Step 3: Get the current Cart (after authentication) and
+        # check that it has current user and the expected total_amount
+        response = api_client.get(current_cart_url)
+        assert response.status_code == 200
+        cart_data = response.json()
+        cart = Order.objects.get(id=cart_data["id"])
+        assert cart.user == user
+        cart_total_amount = Money(response.data["total_amount"], "USD")
+        expected_total_amount = constants["expected_total_amount"]
+        assert cart_total_amount == expected_total_amount
