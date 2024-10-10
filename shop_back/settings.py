@@ -79,6 +79,7 @@ INSTALLED_APPS = [
     "djmoney",
     "rest_framework",
     "rest_framework.authtoken",
+    "drf_yasg",
     # Local Apps
     "api",
     "authentication",
