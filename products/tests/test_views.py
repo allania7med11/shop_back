@@ -1,5 +1,3 @@
-from unittest.mock import MagicMock, patch
-
 import pytest
 from django.urls import reverse
 from djmoney.money import Money
@@ -179,6 +177,7 @@ class TestCartViewSet:
         constants,
         checkout_data,
         payment_method,
+        mock_stripe_factory,
     ):
         """
         Test that a user can successfully checkout the cart using different payment methods,
@@ -199,8 +198,7 @@ class TestCartViewSet:
         assert cart.status == "draft", "Cart should be in 'draft' status before checkout"
         assert cart.user == user, "Cart should belong to the authenticated user"
 
-        # Step 3: Prepare checkout data with the appropriate payment method
-        # Create a copy of checkout_data to avoid modifying the fixture
+        # Step 3: Make cart_checkout with current payment_method
         test_checkout_data = checkout_data.copy()
         if payment_method == "stripe":
             test_checkout_data["payment"] = {
@@ -209,56 +207,30 @@ class TestCartViewSet:
             }
         else:
             test_checkout_data["payment"] = {"payment_method": "cash_on_delivery"}
-        if payment_method == "stripe":
-            with patch("stripe.Customer.create") as mock_customer_create, patch(
-                "stripe.Customer.list"
-            ) as mock_customer_list, patch(
-                "stripe.PaymentIntent.create"
-            ) as mock_payment_intent_create:
 
-                # Mock the customer list response to return no customers (simulate new customer)
-                mock_customer_list.return_value = MagicMock(data=[])
-
-                # Mock the customer creation
-                mock_customer = MagicMock()
-                mock_customer.id = "cus_mocked_customer_id"
-                mock_customer_create.return_value = mock_customer
-
-                # Mock the payment intent creation
-                mock_intent = MagicMock()
-                mock_intent.status = "succeeded"
-                mock_intent.id = "pi_mocked_intent_id"
-
-                # Ensure intent["id"] returns the correct value
-                mock_intent.__getitem__.return_value = "pi_mocked_intent_id"
-
-                mock_payment_intent_create.return_value = mock_intent
-
-                checkout_url = reverse("products:cart-list")
-                response = api_client.post(checkout_url, data=test_checkout_data, format="json")
-                assert (
-                    response.status_code == status.HTTP_201_CREATED
-                ), "Checkout should be successful"
-        else:
+        # Use the fixture to mock Stripe if needed
+        with mock_stripe_factory(payment_method):
             checkout_url = reverse("products:cart-list")
             response = api_client.post(checkout_url, data=test_checkout_data, format="json")
             assert response.status_code == status.HTTP_201_CREATED, "Checkout should be successful"
 
+        # Step 4: Verify that current cart status is set to processing
+        # and its total_amount is expected
         cart.refresh_from_db()
         assert cart.status == "processing", "Cart should be in 'processing' status after checkout"
         cart_total_amount = Money(cart.total_amount, "USD")
         assert (
             cart_total_amount == constants["expected_total_amount"]
         ), "Total amount should match expected total amount"
+        # Step 4: Verify that address was saved correctly
 
-        # Step 8: Verify that the address fields match using a loop
         assert cart.address is not None, "Address should be associated with the cart"
         for field in test_checkout_data["address"]:
             expected_value = test_checkout_data["address"][field]
             actual_value = getattr(cart.address, field)
             assert actual_value == expected_value, f"Address field '{field}' should match"
 
-        # Step 9: Verify the payment details
+        # Step 5: Verify that payment was saved correctly
         assert cart.payment is not None, "Payment should be associated with the cart"
         assert (
             cart.payment.payment_method == payment_method
@@ -270,7 +242,7 @@ class TestCartViewSet:
                 cart.payment.external_id == "pi_mocked_intent_id"
             ), "Payment external ID should match the mocked intent ID"
 
-        # Step 4: Get the current Order and
+        # Step 6: Get the current Order and
         # Check Order is empty with new id
         response = api_client.get(current_cart_url)
         assert response.status_code == status.HTTP_200_OK

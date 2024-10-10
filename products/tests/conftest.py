@@ -1,3 +1,6 @@
+from contextlib import contextmanager
+from unittest.mock import MagicMock, patch
+
 import pytest
 from django.contrib.auth.models import User
 from django.urls import reverse
@@ -106,3 +109,37 @@ def create_user():
     return User.objects.create_user(
         username="testuser", email="testuser@example.com", password="testpassword"
     )
+
+
+@pytest.fixture
+def mock_stripe_factory():
+    @contextmanager
+    def _mock_stripe(payment_method):
+        if payment_method == "stripe":
+            with patch("stripe.Customer.create") as mock_customer_create, patch(
+                "stripe.Customer.list"
+            ) as mock_customer_list, patch(
+                "stripe.PaymentIntent.create"
+            ) as mock_payment_intent_create:
+
+                # Mock the customer list response to return no customers (simulate new customer)
+                mock_customer_list.return_value = MagicMock(data=[])
+
+                # Mock the customer creation
+                mock_customer = MagicMock()
+                mock_customer.id = "cus_mocked_customer_id"
+                mock_customer_create.return_value = mock_customer
+
+                # Mock the payment intent creation
+                mock_intent = MagicMock()
+                mock_intent.status = "succeeded"
+                mock_intent.id = "pi_mocked_intent_id"
+                mock_intent.__getitem__.return_value = "pi_mocked_intent_id"
+
+                mock_payment_intent_create.return_value = mock_intent
+
+                yield  # Control returns to the test function
+        else:
+            yield  # No mocking needed
+
+    return _mock_stripe
