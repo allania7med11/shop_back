@@ -35,7 +35,9 @@ class FileSerializer(serializers.ModelSerializer):
 
 
 class CategoryProductSerializer(serializers.HyperlinkedModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="category-detail", lookup_field="slug")
+    url = serializers.HyperlinkedIdentityField(
+        view_name="products:category-detail", lookup_field="slug"
+    )
 
     class Meta:
         model = Category
@@ -43,7 +45,9 @@ class CategoryProductSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class ProductSerializer(serializers.HyperlinkedModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="product-detail", lookup_field="slug")
+    url = serializers.HyperlinkedIdentityField(
+        view_name="products:product-detail", lookup_field="slug"
+    )
     category = CategoryProductSerializer(read_only=True)
     discount = DiscountSerializer()
     current_price = serializers.ReadOnlyField()
@@ -72,7 +76,9 @@ class ProductSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class CategorySerializer(serializers.HyperlinkedModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="category-detail", lookup_field="slug")
+    url = serializers.HyperlinkedIdentityField(
+        view_name="products:category-detail", lookup_field="slug"
+    )
     products = ProductSerializer(many=True, read_only=True)
 
     class Meta:
@@ -135,7 +141,7 @@ class CartSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ["total_amount", "items", "address", "payment"]
+        fields = ["id", "total_amount", "items", "address", "payment"]
         read_only_fields = ["items", "total_amount"]
 
     def update(self, instance: Order, validated_data):

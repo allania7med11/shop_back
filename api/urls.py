@@ -3,7 +3,7 @@ from django.urls import include, path
 from .views import get_api_schema_view
 
 api_urlpatterns = [
-    path("", include("products.urls")),
+    path("", include(("products.urls", "products"), namespace="products")),
     path("auth/", include("authentication.urls")),
 ]
 
