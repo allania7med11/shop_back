@@ -24,7 +24,7 @@ django-money==2.1.1
 django-quill-editor==0.1.40
 django-shell-plus==1.1.7
 djangorestframework==3.13.1
-drf-yasg==1.21.7
+drf_yasg==1.21.7
 exceptiongroup==1.2.2
 factory_boy==3.3.1
 Faker==30.1.0
