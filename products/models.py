@@ -48,13 +48,16 @@ class Product(models.Model):
         return self.price.amount
 
     class Meta:
-        ordering = ["-updated_at"]
+        ordering = ["-id"]
 
 
 class Discount(models.Model):
     name = models.CharField("Name", max_length=250)
     percent = models.DecimalField("Percentage", max_digits=5, decimal_places=2)
     active = models.BooleanField("Active", default=True)
+
+    class Meta:
+        ordering = ["-id"]
 
     def __str__(self):
         return self.name
@@ -180,3 +183,4 @@ class OrderItems(models.Model):
     class Meta:
         verbose_name_plural = "Order Items"
         unique_together = ("order", "product")
+        ordering = ["-id"]
