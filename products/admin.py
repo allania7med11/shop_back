@@ -20,7 +20,7 @@ class FileInline(admin.TabularInline):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ["name", "price", "discount", "category", "updated_at"]
+    list_display = ["id", "slug", "name", "price", "discount", "category", "updated_at"]
     list_filter = ("category",)
     inlines = [
         FileInline,
