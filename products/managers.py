@@ -1,5 +1,5 @@
 from django.db import models
-from django.db.models import F, Case, When, DecimalField
+from django.db.models import Case, DecimalField, F, When
 
 
 class ProductQuerySet(models.QuerySet):

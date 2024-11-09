@@ -6,17 +6,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('products', '0008_alter_orderitems_quantity'),
+        ("products", "0008_alter_orderitems_quantity"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='order',
-            name='session_id',
+            model_name="order",
+            name="session_id",
         ),
         migrations.AddField(
-            model_name='order',
-            name='uuid',
+            model_name="order",
+            name="uuid",
             field=models.UUIDField(blank=True, editable=False, null=True, unique=True),
         ),
     ]

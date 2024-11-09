@@ -1,3 +1,7 @@
+# SHP-2809242
+- add env variable:
+    - SENTRY_DSN
+    
 # SHP-2806245
 - add env variables:
     - STRIPE_PUBLISHABLE_KEY

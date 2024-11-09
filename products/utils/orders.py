@@ -1,4 +1,5 @@
 import uuid
+
 from products.models import Order, OrderAddress, OrderItems, Payment
 
 
@@ -17,7 +18,7 @@ def get_current_draft_order(request):
         )
         return order
     user = request.user
-    user_order = Order.objects.filter(user=user,status=Order.OrderStatus.DRAFT).first()
+    user_order = Order.objects.filter(user=user, status=Order.OrderStatus.DRAFT).first()
     if session_order:
         if not user_order:
             session_order.uuid = None
@@ -34,6 +35,7 @@ def get_current_draft_order(request):
         status=Order.OrderStatus.DRAFT,
     )
     return order
+
 
 def get_session_order(request):
     order_uuid = request.session.get("order_uuid")
@@ -56,6 +58,7 @@ def get_existing_or_new_order_item(order, product):
         instance = OrderItems(order=order)
     return instance
 
+
 def merge_orders(current_order: Order, other_order: Order):
     # Check if both orders are in draft status
     if not (current_order.is_draft() and other_order.is_draft()):
@@ -65,16 +68,20 @@ def merge_orders(current_order: Order, other_order: Order):
     for item in other_order.items.all():
         merge_order_item(current_order, item)
 
+
 def merge_order_item(current_order: Order, item: OrderItems):
     existing_item: OrderItems = current_order.items.filter(product=item.product).first()
     if existing_item:
-        # If the same product already exists in the current order, update the quantity and subtotal
+        # If the same product already exists in the current order, update the
+        # quantity and subtotal
         existing_item.quantity += item.quantity
         existing_item.save()
     else:
-        # If the product does not exist in the current order, create a new order item
+        # If the product does not exist in the current order, create a new
+        # order item
         item.order = current_order
         item.save()
+
 
 def get_existing_or_new_order_address(order, address_data):
     try:
@@ -87,6 +94,7 @@ def get_existing_or_new_order_address(order, address_data):
 def set_order_to_processing(order: Order):
     order.status = Order.PROCESSING
     order.save()
+
 
 def set_payment_to_succeeded(payment: Payment):
     payment.status = Payment.SUCCEEDED
