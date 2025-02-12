@@ -12,7 +12,8 @@ fi
 
 # Collect static files if enabled
 if [ "$COLLECTSTATIC" = "True" ]; then
-    python manage.py collectstatic --noinput && echo "Static files generated successfully"
+    # Don't change this message; we use it to detect when static files are generated successfully
+    python manage.py collectstatic --noinput && echo "Generation completed successfully"
 fi
 
 # Start the application based on the environment
