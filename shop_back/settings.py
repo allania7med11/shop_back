@@ -100,6 +100,10 @@ MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware",
 ]
 
+# django-debug-middleware
+if env.bool("ACTIVATE_DJANGO_DEBUG_MIDDLEWARE", default=False):
+    MIDDLEWARE += ("core.middlewares.debug.DebugMiddleware",)
+
 
 ROOT_URLCONF = "shop_back.urls"
 

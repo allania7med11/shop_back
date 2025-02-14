@@ -5,8 +5,13 @@ from django.http import JsonResponse
 from django.middleware.csrf import get_token
 from django.views.decorators.http import require_POST
 from rest_framework.authentication import BasicAuthentication, SessionAuthentication
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
+from rest_framework.viewsets import ModelViewSet
+
+from .models import UserProfile
+from .serializers import UserProfileSerializer
 
 
 def get_csrf(request):
@@ -51,16 +56,24 @@ class SessionView(APIView):
         return JsonResponse({"isAuthenticated": True})
 
 
-class UserProfileView(APIView):
+class UserProfileViewSet(ModelViewSet):
+    serializer_class = UserProfileSerializer
     authentication_classes = [SessionAuthentication, BasicAuthentication]
     permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
 
-    @staticmethod
-    def get(request, format=None):
-        return JsonResponse(
-            {
-                "email": request.user.email,
-                "first_name": request.user.first_name,
-                "last_name": request.user.last_name,
-            }
-        )
+    def get_queryset(self):
+        return UserProfile.objects.filter(user=self.request.user)
+
+    def retrieve(self, request, *args, **kwargs):
+        user_profile, created = UserProfile.objects.get_or_create(user=request.user)
+        serializer = self.get_serializer(user_profile)
+        return JsonResponse(serializer.data)
+
+    def update(self, request, *args, **kwargs):
+        user_profile, created = UserProfile.objects.get_or_create(user=request.user)
+        serializer = self.get_serializer(user_profile, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(serializer.data)
+        return JsonResponse(serializer.errors, status=400)
