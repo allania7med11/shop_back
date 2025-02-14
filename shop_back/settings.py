@@ -85,6 +85,7 @@ INSTALLED_APPS = [
     "authentication",
     "core",
     "products",
+    "chat",
 ]
 
 
