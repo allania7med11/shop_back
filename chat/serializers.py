@@ -30,8 +30,8 @@ class MessageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Message
-        fields = ["id", "chat", "content", "created_by", "created_at", "is_mine"]
-        read_only_fields = ["id", "chat", "created_by", "created_at", "is_mine"]
+        fields = ["id", "content", "created_by", "created_at", "is_mine"]
+        read_only_fields = ["id", "created_by", "created_at", "is_mine"]
 
     def get_created_by(self, obj):
         """Return user details if they are NOT a GuestUser, otherwise None."""
@@ -46,6 +46,24 @@ class MessageSerializer(serializers.ModelSerializer):
 
 
 class ChatSerializer(serializers.ModelSerializer):
+    """Serializer for chat details, including creator details and latest message."""
+
+    created_by = serializers.SerializerMethodField()
+    is_mine = serializers.SerializerMethodField()
+    latest_message = MessageSerializer(read_only=True)
+
     class Meta:
         model = Chat
-        fields = ["id", "created_by", "created_at", "latest_message"]
+        fields = ["id", "created_by", "created_at", "latest_message", "is_mine"]
+        read_only_fields = ["id", "created_by", "created_at", "latest_message", "is_mine"]
+
+    def get_created_by(self, obj):
+        """Return user details if they are NOT a GuestUser, otherwise None."""
+        if obj.created_by and not GuestUser.objects.filter(user=obj.created_by).exists():
+            return UserProfileSerializer(obj.created_by).data
+        return None
+
+    def get_is_mine(self, obj):
+        """Use `is_message_owner` to check if the chat belongs to the request user."""
+        request = self.context.get("request")
+        return is_message_owner(request, obj.created_by)
