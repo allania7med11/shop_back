@@ -4,6 +4,7 @@ from .views import get_api_schema_view
 
 api_urlpatterns = [
     path("", include(("products.urls", "products"), namespace="products")),
+    path("", include(("chat.urls", "chats"), namespace="chats")),
     path("auth/", include("authentication.urls")),
 ]
 
