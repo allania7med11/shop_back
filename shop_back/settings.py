@@ -81,7 +81,6 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "drf_yasg",
     # Local Apps
-    "api",
     "authentication",
     "core",
     "products",

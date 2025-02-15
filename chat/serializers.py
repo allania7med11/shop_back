@@ -2,9 +2,8 @@ from django.contrib.auth.models import User
 from rest_framework import serializers
 
 from authentication.models import GuestUser
+from chat.models import Chat, Message
 from chat.utils import is_message_owner
-
-from .models import Message
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -44,3 +43,9 @@ class MessageSerializer(serializers.ModelSerializer):
         """Check if the message belongs to the request user."""
         request = self.context.get("request")
         return is_message_owner(request, obj.created_by)
+
+
+class ChatSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Chat
+        fields = ["id", "created_by", "created_at", "latest_message"]
