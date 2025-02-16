@@ -7,7 +7,7 @@ from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet
 
 from chat.models import Chat, Message
 from chat.serializers import ChatSerializer, MessageSerializer
-from chat.utils import get_or_create_chat, get_or_create_guest_user
+from chat.utils import get_current_chat, get_or_create_current_chat
 
 
 class MessageViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
@@ -19,15 +19,15 @@ class MessageViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
 
     def get_queryset(self):
         """Returns messages for the authenticated user or guest user."""
-        user = get_or_create_guest_user(self.request)
-        chat = get_or_create_chat(user)
-        return Message.objects.filter(chat=chat)
+        chat = get_current_chat(self.request)
+        return Message.objects.filter(chat=chat) if chat else Message.objects.none()
 
     def perform_create(self, serializer):
-        """Handles message creation, linking it to the correct chat and user."""
-        user = get_or_create_guest_user(self.request)
-        chat = get_or_create_chat(user)
-        serializer.save(chat=chat, created_by=user)
+        """Handles message creation, ensuring a chat exists before saving."""
+        chat = get_or_create_current_chat(
+            self.request
+        )  # Ensures chat exists before message creation
+        serializer.save(chat=chat, created_by=chat.created_by)
 
 
 class AdminChatViewSet(ReadOnlyModelViewSet):
