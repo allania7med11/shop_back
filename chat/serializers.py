@@ -6,7 +6,7 @@ from chat.models import Chat, Message
 from chat.utils import is_message_owner
 
 
-class UserProfileSerializer(serializers.ModelSerializer):
+class ChatUserProfileSerializer(serializers.ModelSerializer):
     """Serializer for user's first name, last name, and profile photo."""
 
     profile_photo = serializers.SerializerMethodField()
@@ -36,7 +36,7 @@ class MessageSerializer(serializers.ModelSerializer):
     def get_created_by(self, obj):
         """Return user details if they are NOT a GuestUser, otherwise None."""
         if obj.created_by and not GuestUser.objects.filter(user=obj.created_by).exists():
-            return UserProfileSerializer(obj.created_by).data
+            return ChatUserProfileSerializer(obj.created_by).data
         return None
 
     def get_is_mine(self, obj):
@@ -60,7 +60,7 @@ class ChatSerializer(serializers.ModelSerializer):
     def get_created_by(self, obj):
         """Return user details if they are NOT a GuestUser, otherwise None."""
         if obj.created_by and not GuestUser.objects.filter(user=obj.created_by).exists():
-            return UserProfileSerializer(obj.created_by).data
+            return ChatUserProfileSerializer(obj.created_by).data
         return None
 
     def get_is_mine(self, obj):
