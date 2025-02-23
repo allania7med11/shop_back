@@ -67,11 +67,11 @@ def get_current_chat(request):
         return Chat.objects.filter(created_by=user).first()  # Return user chat or None
 
     # Check for existing guest user
-    guest_id = request.session.get("guest_id")
-    if not guest_id:
+    guest_token = request.session.get("guest_token")
+    if not guest_token:
         return None  # No guest user exists, return None
 
-    guest_user = GuestUser.objects.filter(id=guest_id).first()
+    guest_user = GuestUser.objects.filter(token=guest_token).first()
     if not guest_user:
         return None  # Guest user not found, return None
 
@@ -93,13 +93,13 @@ def get_or_create_current_chat(request):
         return chat
 
     # Handle guest user case
-    guest_id = request.session.get("guest_id")
-    if not guest_id:
+    guest_token = request.session.get("guest_token")
+    if not guest_token:
         guest_user = GuestUser.objects.create()  # Create a new guest user
-        request.session["guest_id"] = guest_user.id
+        request.session["guest_token"] = guest_user.token
         request.session.modified = True
     else:
-        guest_user, _ = GuestUser.objects.get_or_create(id=guest_id)
+        guest_user, _ = GuestUser.objects.get_or_create(token=guest_token)
 
     chat, _ = Chat.objects.get_or_create(created_by=guest_user.user)
     return chat

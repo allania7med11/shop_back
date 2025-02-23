@@ -9,11 +9,11 @@ from chat.utils import migrate_guest_chat_to_user
 @receiver(user_logged_in)
 def handle_guest_migration(sender, request, user, **kwargs):
     """Handles guest-to-user migration after login."""
-    guest_id = request.session.get("guest_id")
+    guest_token = request.session.get("guest_token")
 
-    if guest_id:
+    if guest_token:
         with transaction.atomic():
-            guest_user = GuestUser.objects.select_related("user").get(id=guest_id)
+            guest_user = GuestUser.objects.select_related("user").get(token=guest_token)
 
             # Migrate guest chat messages
             migrate_guest_chat_to_user(guest_user, user)
@@ -23,5 +23,5 @@ def handle_guest_migration(sender, request, user, **kwargs):
             guest_user.delete()
 
             # Remove guest session
-            request.session.pop("guest_id", None)
+            request.session.pop("guest_token", None)
             request.session.modified = True
