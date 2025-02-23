@@ -45,25 +45,90 @@ class MessageSerializer(serializers.ModelSerializer):
         return is_message_owner(request, obj.created_by)
 
 
-class ChatSerializer(serializers.ModelSerializer):
-    """Serializer for chat details, including creator details and latest message."""
+class ChatListSerializer(serializers.ModelSerializer):
+    """
+    Serializer for listing chats, including the creator's details and the latest message.
+    """
 
     created_by = serializers.SerializerMethodField()
-    is_mine = serializers.SerializerMethodField()
-    latest_message = MessageSerializer(read_only=True)
+    latest_message = serializers.SerializerMethodField()
 
     class Meta:
         model = Chat
-        fields = ["id", "created_by", "created_at", "latest_message", "is_mine"]
-        read_only_fields = ["id", "created_by", "created_at", "latest_message", "is_mine"]
+        fields = ["id", "created_by", "created_at", "latest_message"]
+        read_only_fields = ["id", "created_by", "created_at", "latest_message"]
 
     def get_created_by(self, obj):
-        """Return user details if they are NOT a GuestUser, otherwise None."""
-        if obj.created_by and not GuestUser.objects.filter(user=obj.created_by).exists():
+        """
+        Return the details of the user who created the chat.
+        If the creator is a guest user, return None.
+        """
+        if obj.created_by_id and not GuestUser.objects.filter(user_id=obj.created_by_id).exists():
             return ChatUserProfileSerializer(obj.created_by).data
         return None
 
-    def get_is_mine(self, obj):
-        """Use `is_message_owner` to check if the chat belongs to the request user."""
-        request = self.context.get("request")
-        return is_message_owner(request, obj.created_by)
+    def get_latest_message(self, obj):
+        """
+        Retrieve the latest message in the chat.
+        Returns None if there are no messages.
+        """
+        latest_msg = obj.messages.order_by("-created_at").first()
+        return MessageSerializer(latest_msg).data if latest_msg else None
+
+
+class ChatDetailSerializer(serializers.ModelSerializer):
+    """
+    Serializer for retrieving a chat, including all messages.
+    Supports adding a new message via the `new_message` field.
+    """
+
+    created_by = serializers.SerializerMethodField()
+    messages = MessageSerializer(many=True)
+    new_message = MessageSerializer(write_only=True, required=False)
+
+    class Meta:
+        model = Chat
+        fields = ["id", "created_by", "created_at", "latest_message", "messages", "new_message"]
+        read_only_fields = ["id", "created_by", "created_at", "latest_message", "messages"]
+
+    def get_created_by(self, obj):
+        """
+        Return the details of the user who created the chat.
+        If the creator is a guest user, return None.
+        """
+        if obj.created_by_id and not GuestUser.objects.filter(user_id=obj.created_by_id).exists():
+            return ChatUserProfileSerializer(obj.created_by).data
+        return None
+
+    def get_latest_message(self, obj):
+        """
+        Retrieve the latest message in the chat.
+        Returns None if there are no messages.
+        """
+        latest_msg = obj.messages.order_by("-created_at").first()
+        return MessageSerializer(latest_msg).data if latest_msg else None
+
+
+class ChatMessageAddSerializer(serializers.ModelSerializer):
+    """
+    Serializer for adding a new message to a chat.
+    """
+
+    class Meta:
+        model = Message
+        fields = ["content"]  # Only allow writing the 'content' field
+
+    def create(self, validated_data):
+        """Handles message creation."""
+        chat = self.context["chat"]
+        user = self.context["request"].user
+
+        new_message = Message.objects.create(
+            chat=chat, content=validated_data["content"], created_by=user
+        )
+
+        # Update latest message reference in Chat
+        chat.latest_message = new_message
+        chat.save(update_fields=["latest_message"])
+
+        return new_message

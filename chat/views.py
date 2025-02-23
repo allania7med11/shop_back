@@ -1,12 +1,17 @@
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.mixins import CreateModelMixin, ListModelMixin
+from rest_framework.mixins import CreateModelMixin, ListModelMixin, RetrieveModelMixin
 from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
-from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet
+from rest_framework.viewsets import GenericViewSet
 
 from chat.models import Chat, Message
-from chat.serializers import ChatSerializer, MessageSerializer
+from chat.serializers import (
+    ChatDetailSerializer,
+    ChatListSerializer,
+    ChatMessageAddSerializer,
+    MessageSerializer,
+)
 from chat.utils import get_current_chat, get_or_create_current_chat
 
 
@@ -30,35 +35,30 @@ class MessageViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
         serializer.save(chat=chat, created_by=chat.created_by)
 
 
-class AdminChatViewSet(ReadOnlyModelViewSet):
-    """Admin API for viewing chats and retrieving messages."""
+class AdminChatViewSet(RetrieveModelMixin, ListModelMixin, GenericViewSet):
+    """
+    Admin API for managing chats.
+    - `list` → Returns all chats (only those with a latest message).
+    - `retrieve` → Returns chat details.
+    - `add_message` (POST) → Allows adding a new message.
+    """
 
-    queryset = Chat.objects.all()
-    serializer_class = ChatSerializer
+    queryset = Chat.objects.exclude(latest_message__isnull=True)
     permission_classes = [IsAdminUser]
 
-    def get_queryset(self):
-        """Return only chats where latest_message is NOT NULL."""
-        return Chat.objects.exclude(latest_message__isnull=True)
+    def get_serializer_class(self):
+        if self.action == "list":
+            return ChatListSerializer
+        return ChatDetailSerializer
 
-    @action(detail=True, methods=["GET", "POST"])
-    def messages(self, request, pk=None):
-        """Retrieve messages or send a new message to a chat."""
+    @action(detail=True, methods=["post"])
+    def add_message(self, request, pk=None):
         chat = self.get_object()
+        serializer = ChatMessageAddSerializer(
+            data=request.data, context={"chat": chat, "request": request}
+        )
 
-        if request.method == "GET":
-            # Retrieve messages for the chat
-            messages = Message.objects.filter(chat=chat)
-            serializer = MessageSerializer(messages, many=True, context={"request": request})
-            return Response(serializer.data)
+        serializer.is_valid(raise_exception=True)
+        new_message = serializer.save()
 
-        elif request.method == "POST":
-            # Admin sends a new message
-            serializer = MessageSerializer(data=request.data, context={"request": request})
-            if serializer.is_valid():
-                message = serializer.save(chat=chat, created_by=request.user)  # Admin is sender
-                return Response(
-                    MessageSerializer(message, context={"request": request}).data,
-                    status=status.HTTP_201_CREATED,
-                )
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(MessageSerializer(new_message).data, status=status.HTTP_201_CREATED)
