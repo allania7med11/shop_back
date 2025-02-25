@@ -19,39 +19,33 @@ def is_message_owner(request, created_by):
 
 
 def migrate_guest_chat_to_user(guest_user, user):
-    """Transfers messages and chats from a guest user to an authenticated user."""
+    """
+    Transfers all messages from guest chat to user's chat and
+    updates only guest user's messages.
+    """
     with transaction.atomic():
         guest_chat = Chat.objects.filter(created_by=guest_user.user).first()
         user_chat = Chat.objects.filter(created_by=user).first()
 
-        if guest_chat and user_chat:
-            # Move guest messages to user's chat
-            Message.objects.filter(chat=guest_chat).update(chat=user_chat, created_by=user)
+        if guest_chat:
+            if not user_chat:
+                # If user has no existing chat, reassign guest chat to them
+                guest_chat.created_by = user
+                guest_chat.save()
+                user_chat = guest_chat
+            else:
+                # Move all messages from guest_chat to user_chat
+                Message.objects.filter(chat=guest_chat).update(chat=user_chat)
 
-            # Update user's latest_message if guest chat had a more recent one
-            if guest_chat.latest_message and (
-                not user_chat.latest_message
-                or guest_chat.latest_message.created_at > user_chat.latest_message.created_at
-            ):
-                user_chat.latest_message = guest_chat.latest_message
-                user_chat.save()
+                # Update only messages created by the guest user
+                Message.objects.filter(chat=user_chat, created_by=guest_user.user).update(
+                    created_by=user
+                )
 
-            # Delete guest chat after merging
-            guest_chat.delete()
+                # Delete guest chat after merging messages
+                guest_chat.delete()
 
-        elif guest_chat and not user_chat:
-            # Assign guest chat to user if they have no existing chat
-            guest_chat.created_by = user
-            guest_chat.save()
-
-            # Ensure messages are assigned to the authenticated user
-            Message.objects.filter(chat=guest_chat).update(created_by=user)
-
-        elif not guest_chat:
-            # If no guest chat exists, still ensure messages are assigned
-            Message.objects.filter(created_by=guest_user.user).update(created_by=user)
-
-    return guest_user  # Return guest_user for cleanup in handle_guest_migration
+    return guest_user  # Return for cleanup in handle_guest_migration
 
 
 def get_current_chat(request):
