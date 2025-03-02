@@ -58,6 +58,7 @@ DEFAULT_FROM_EMAIL = env("DJANGO_DEFAULT_FROM_EMAIL", default="webmaster@localho
 
 INSTALLED_APPS = [
     # Django Apps
+    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -123,6 +124,7 @@ TEMPLATES = [
     },
 ]
 
+ASGI_APPLICATION = "shop_back.asgi.application"
 WSGI_APPLICATION = "shop_back.wsgi.application"
 
 
