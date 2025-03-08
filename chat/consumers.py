@@ -26,24 +26,28 @@ class ChatConsumer(WebsocketConsumer):
 
     def receive(self, text_data):
         """Handles receiving a message via WebSocket."""
-        text_data_json = json.loads(text_data)
-        content = text_data_json.get("content")
+        try:
+            text_data_json = json.loads(text_data)
+            content = text_data_json.get("content")
 
-        if not content:
-            self.send(text_data=json.dumps({"error": "Message content is required"}))
-            return
+            if not content:
+                self.send(text_data=json.dumps({"error": "Message content is required"}))
+                return
 
-        # Since GuestUser always has a User, no need for extra checks
-        message = Message.objects.create(
-            chat=self.chat, created_by=self.chat.created_by, content=content
-        )
+            message = Message.objects.create(
+                chat=self.chat, created_by=self.chat.created_by, content=content
+            )
 
-        # Pass `scope` in context so serializer can correctly determine user/session
-        serialized_message = MessageSerializer(message, context={"scope": self.scope}).data
+            # Serialize and broadcast the message
+            serialized_message = MessageSerializer(message, context={"scope": self.scope}).data
+            async_to_sync(self.channel_layer.group_send)(
+                self.room_group_name, {"type": "chat_message", "data": serialized_message}
+            )
 
-        async_to_sync(self.channel_layer.group_send)(
-            self.room_group_name, {"type": "chat_message", "data": serialized_message}
-        )
+        except json.JSONDecodeError:
+            self.send(text_data=json.dumps({"error": "Invalid JSON format"}))
+        except Exception:
+            self.send(text_data=json.dumps({"error": "An error occurred"}))
 
     def chat_message(self, event):
         """Handles broadcasting messages to WebSocket clients."""
@@ -92,7 +96,7 @@ class AdminChatConsumer(WebsocketConsumer):
             message = Message.objects.create(chat=self.chat, created_by=self.user, content=content)
 
             # Serialize and broadcast the message
-            serialized_message = MessageSerializer(message).data
+            serialized_message = MessageSerializer(message, context={"scope": self.scope}).data
             async_to_sync(self.channel_layer.group_send)(
                 self.room_group_name, {"type": "chat_message", "data": serialized_message}
             )
