@@ -39,7 +39,7 @@ class ChatConsumer(WebsocketConsumer):
             )
 
             # Serialize and broadcast the message
-            serialized_message = MessageSerializer(message, context={"scope": self.scope}).data
+            serialized_message = MessageSerializer(message).data
             async_to_sync(self.channel_layer.group_send)(
                 self.room_group_name, {"type": "chat_message", "data": serialized_message}
             )
