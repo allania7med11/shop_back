@@ -23,7 +23,7 @@ class ChatUserProfileSerializer(serializers.ModelSerializer):
 
 
 class MessageSerializer(serializers.ModelSerializer):
-    """Serializer for messages including user details."""
+    """Serializer for messages including user details and session support."""
 
     created_by = serializers.SerializerMethodField()
     is_mine = serializers.SerializerMethodField()
@@ -33,6 +33,29 @@ class MessageSerializer(serializers.ModelSerializer):
         fields = ["id", "content", "created_by", "created_at", "is_mine"]
         read_only_fields = ["id", "created_by", "created_at", "is_mine"]
 
+    def __init__(self, *args, **kwargs):
+        """
+        Support both Django REST Framework (DRF) API requests and Django Channels WebSockets.
+        Automatically set self.user and self.session based on request or scope.
+        """
+        context = kwargs.get("context", {})
+
+        # Set user & session from request (API case)
+        if "request" in context:
+            self.user = context["request"].user
+            self.session = context["request"].session
+
+        # Set user & session from scope (WebSocket case)
+        elif "scope" in context:
+            self.user = context["scope"].get("user", None)
+            self.session = context["scope"].get("session", {})
+
+        else:
+            self.user = None
+            self.session = {}
+
+        super().__init__(*args, **kwargs)
+
     def get_created_by(self, obj):
         """Return user details if they are NOT a GuestUser, otherwise None."""
         if obj.created_by and not GuestUser.objects.filter(user=obj.created_by).exists():
@@ -40,9 +63,10 @@ class MessageSerializer(serializers.ModelSerializer):
         return None
 
     def get_is_mine(self, obj):
-        """Check if the message belongs to the request user."""
-        request = self.context.get("request")
-        return is_message_owner(request, obj.created_by)
+        """Determine if the message belongs to the authenticated user."""
+        if obj and self.user:
+            return is_message_owner(obj, self.user, self.session)
+        return False
 
 
 class ChatListSerializer(serializers.ModelSerializer):

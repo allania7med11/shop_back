@@ -1,21 +1,39 @@
+from typing import Union
+
+from django.contrib.auth.models import User
+from django.contrib.sessions.backends.base import SessionBase
 from django.db import transaction
 
 from authentication.models import GuestUser
 from chat.models import Chat, Message
 
 
-def is_message_owner(request, created_by):
-    """Checks if the given message belongs to the request user, including guest users."""
-    if not request or not request.user:
-        return False
+def get_current_user(user: User, session: Union[SessionBase, dict, None]) -> User:
+    """
+    Returns the authenticated user if available, otherwise tries to retrieve a guest user
+    based on the session's guest_token.
 
-    if created_by == request.user:
-        return True
+    Works for both Django REST Framework (DRF) and Django Channels WebSockets.
+    """
+    if user.is_authenticated:
+        return user
 
-    guest_token = request.session.get("guest_token")
-    guest_user = GuestUser.objects.filter(user=created_by, token=guest_token).first()
+    if isinstance(session, (dict, SessionBase)):
+        guest_token = session.get("guest_token")
+        guest_user = GuestUser.objects.filter(token=guest_token).first()
+        return (
+            guest_user.user if guest_user else user
+        )  # Return guest user if found, else return AnonymousUser
 
-    return guest_user is not None
+    return user  # Default to AnonymousUser
+
+
+def is_message_owner(message: Message, user: User, session: Union[SessionBase, dict, None]):
+    """Checks if the given message belongs to the authenticated user or a session-based guest."""
+    message_owner = message.created_by
+    identified_user = get_current_user(user, session)
+
+    return message_owner == identified_user
 
 
 def migrate_guest_chat_to_user(guest_user, user):

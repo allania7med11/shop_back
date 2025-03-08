@@ -38,8 +38,9 @@ class ChatConsumer(WebsocketConsumer):
             chat=self.chat, created_by=self.chat.created_by, content=content
         )
 
-        # Serialize message and broadcast it
-        serialized_message = MessageSerializer(message).data
+        # Pass `scope` in context so serializer can correctly determine user/session
+        serialized_message = MessageSerializer(message, context={"scope": self.scope}).data
+
         async_to_sync(self.channel_layer.group_send)(
             self.room_group_name, {"type": "chat_message", "data": serialized_message}
         )
