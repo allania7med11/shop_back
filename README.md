@@ -42,6 +42,7 @@ This project uses a `.env` file to configure its environment. You can create a `
 - `STRIPE_PUBLISHABLE_KEY`: Your Stripe publishable key used for client-side requests.
 - `STRIPE_SECRET_KEY`: Your Stripe secret key used for server-side requests.
 - `SENTRY_DSN`: Your Sentry Data Source Name used for error tracking and monitoring in your application.
+- `REDIS_URL`: The connection URL for Redis, used as a caching layer and message broker in your application. 
 
 
 
