@@ -12,7 +12,7 @@ from chat.serializers import (
     ChatMessageAddSerializer,
     MessageSerializer,
 )
-from chat.utils import get_current_chat, get_or_create_current_chat
+from chat.utils import get_or_create_current_chat_by_request
 
 
 class MessageViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
@@ -24,12 +24,12 @@ class MessageViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
 
     def get_queryset(self):
         """Returns messages for the authenticated user or guest user."""
-        chat = get_current_chat(self.request)
+        chat = get_or_create_current_chat_by_request(self.request)
         return Message.objects.filter(chat=chat) if chat else Message.objects.none()
 
     def perform_create(self, serializer):
         """Handles message creation, ensuring a chat exists before saving."""
-        chat = get_or_create_current_chat(
+        chat = get_or_create_current_chat_by_request(
             self.request
         )  # Ensures chat exists before message creation
         serializer.save(chat=chat, created_by=chat.created_by)

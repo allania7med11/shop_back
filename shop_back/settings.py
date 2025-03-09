@@ -58,6 +58,7 @@ DEFAULT_FROM_EMAIL = env("DJANGO_DEFAULT_FROM_EMAIL", default="webmaster@localho
 
 INSTALLED_APPS = [
     # Django Apps
+    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -122,6 +123,19 @@ TEMPLATES = [
         },
     },
 ]
+
+
+ASGI_APPLICATION = "shop_back.asgi.application"
+
+REDIS_URL = env("REDIS_URL", default="redis://localhost:6379/0")
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [REDIS_URL],
+        },
+    },
+}
 
 WSGI_APPLICATION = "shop_back.wsgi.application"
 

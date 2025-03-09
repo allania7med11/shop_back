@@ -38,10 +38,11 @@ class UserProfileSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(source="user.first_name")
     last_name = serializers.CharField(source="user.last_name")
     profile_photo = serializers.ImageField(required=False)
+    is_admin = serializers.BooleanField(source="user.is_staff", read_only=True)
 
     class Meta:
         model = UserProfile
-        fields = ["first_name", "last_name", "email", "profile_photo"]
+        fields = ["first_name", "last_name", "email", "profile_photo", "is_admin"]
 
     def update(self, instance: UserProfile, validated_data):
         user_data = validated_data.pop("user", {})
