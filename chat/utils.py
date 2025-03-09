@@ -42,6 +42,13 @@ def migrate_guest_chat_to_user(guest_user, user):
                     created_by=user
                 )
 
+                # Determine latest message after merging
+                latest_message = (
+                    Message.objects.filter(chat=user_chat).order_by("-created_at").first()
+                )
+                user_chat.latest_message = latest_message
+                user_chat.save()
+
                 # Delete guest chat after merging messages
                 guest_chat.delete()
 
