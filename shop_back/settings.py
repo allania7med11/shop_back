@@ -58,6 +58,7 @@ DEFAULT_FROM_EMAIL = env("DJANGO_DEFAULT_FROM_EMAIL", default="webmaster@localho
 
 INSTALLED_APPS = [
     # Django Apps
+    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -81,10 +82,10 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "drf_yasg",
     # Local Apps
-    "api",
     "authentication",
     "core",
     "products",
+    "chat",
 ]
 
 
@@ -99,6 +100,10 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
 ]
+
+# django-debug-middleware
+if env.bool("ACTIVATE_DJANGO_DEBUG_MIDDLEWARE", default=False):
+    MIDDLEWARE += ("core.middlewares.debug.DebugMiddleware",)
 
 
 ROOT_URLCONF = "shop_back.urls"
@@ -118,6 +123,19 @@ TEMPLATES = [
         },
     },
 ]
+
+
+ASGI_APPLICATION = "shop_back.asgi.application"
+
+REDIS_URL = env("REDIS_URL", default="redis://localhost:6379/0")
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [REDIS_URL],
+        },
+    },
+}
 
 WSGI_APPLICATION = "shop_back.wsgi.application"
 

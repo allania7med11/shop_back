@@ -6,7 +6,7 @@
   "justMyCode": false,
   "configurations": [
     {
-      "name": "Shop_Back",
+      "name": "Shop_Back: Project",
       "type": "python",
       "request": "launch",
       "program": "${workspaceFolder}/manage.py",
@@ -15,7 +15,9 @@
         "0.0.0.0:8000"
       ],
       "django": true,
-      "justMyCode": true
+      "justMyCode": true,
+      "envFile": "${workspaceFolder}/.env"
+
     },
     {
       "name": "Shop_Back: Shell",

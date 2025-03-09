@@ -1,3 +1,11 @@
+# 869851tx6
+- add env variable:
+    - REDIS_URL
+
+# 8697ttzqp
+- add env variable:
+    - ACTIVATE_DJANGO_DEBUG_MIDDLEWARE
+
 # SHP-2809242
 - add env variable:
     - SENTRY_DSN
