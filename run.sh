@@ -22,7 +22,7 @@ if [ "$ENVIRONMENT" = "debug" ]; then
 elif [ "$ENVIRONMENT" = "dev" ]; then
     python manage.py runserver 0.0.0.0:$PORT
 elif [ "$ENVIRONMENT" = "prod" ]; then
-    gunicorn shop_back.wsgi:application --bind 0.0.0.0:$PORT
+    daphne -b 0.0.0.0 -p $PORT shop_back.asgi:application
 elif [ "$ENVIRONMENT" = "test" ]; then
     pytest
 fi
