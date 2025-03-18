@@ -34,7 +34,13 @@ class MessageSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "created_by", "created_at", "is_mine"]
 
     def get_created_by(self, obj):
-        """Return user details if they are NOT a GuestUser, otherwise None."""
+        """
+        If the request exists and the user is authenticated, return the serialized ChatUserProfile.
+        Otherwise, check if the message creator is not a GuestUser before returning their details.
+        """
+        request = self.context.get("request")
+        if request and request.user.is_authenticated:
+            return ChatUserProfileSerializer(obj.created_by).data
         if obj.created_by and not GuestUser.objects.filter(user=obj.created_by).exists():
             return ChatUserProfileSerializer(obj.created_by).data
         return None

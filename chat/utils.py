@@ -33,6 +33,10 @@ def migrate_guest_chat_to_user(guest_user, user):
                 guest_chat.created_by = user
                 guest_chat.save()
                 user_chat = guest_chat
+                # Update only messages created by the guest user
+                Message.objects.filter(chat=user_chat, created_by=guest_user.user).update(
+                    created_by=user
+                )
             else:
                 # Move all messages from guest_chat to user_chat
                 Message.objects.filter(chat=guest_chat).update(chat=user_chat)
