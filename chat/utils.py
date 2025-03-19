@@ -2,6 +2,7 @@ from django.db import transaction
 
 from authentication.models import GuestUser
 from chat.models import Chat, Message
+from chat.signals import update_latest_message
 
 
 def is_message_owner(request, created_by):
@@ -46,15 +47,8 @@ def migrate_guest_chat_to_user(guest_user, user):
                     created_by=user
                 )
 
-                # Determine latest message after merging
-                latest_message = (
-                    Message.objects.filter(chat=user_chat).order_by("-created_at").first()
-                )
-                user_chat.latest_message = latest_message
-                user_chat.save()
-
-                # Delete guest chat after merging messages
-                guest_chat.delete()
+                # Manually trigger latest message update for user_chat
+                update_latest_message(user_chat)
 
     return guest_user  # Return for cleanup in handle_guest_migration
 
