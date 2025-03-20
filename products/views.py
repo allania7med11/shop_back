@@ -40,7 +40,11 @@ class CartViewSet(CartInitiationMixin, viewsets.ModelViewSet):
     serializer_class = CartSerializer
 
     def get_queryset(self):
-        return Order.objects.filter(id=self.cart.id)
+        return (
+            Order.objects.filter(id=self.cart.id)
+            .select_related("user", "address")
+            .prefetch_related("items", "items__product", "items__product__files")
+        )
 
     @action(detail=False, methods=["get"])
     def current(self, request):
