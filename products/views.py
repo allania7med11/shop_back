@@ -29,7 +29,7 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Category.objects.all()
+    queryset = Category.objects.prefetch_related("products").all()
     serializer_class = CategorySerializer
     lookup_field = "slug"
     permission_classes = [permissions.AllowAny]

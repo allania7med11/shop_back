@@ -25,7 +25,11 @@ class MessageViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
     def get_queryset(self):
         """Returns messages for the authenticated user or guest user."""
         chat = get_or_create_current_chat_by_request(self.request)
-        return Message.objects.filter(chat=chat) if chat else Message.objects.none()
+        return (
+            Message.objects.filter(chat=chat).select_related("created_by", "created_by__profile")
+            if chat
+            else Message.objects.none()
+        )
 
     def perform_create(self, serializer):
         """Handles message creation, ensuring a chat exists before saving."""
@@ -43,7 +47,15 @@ class AdminChatViewSet(RetrieveModelMixin, ListModelMixin, GenericViewSet):
     - `add_message` (POST) → Allows adding a new message.
     """
 
-    queryset = Chat.objects.exclude(latest_message__isnull=True)
+    queryset = (
+        Chat.objects.exclude(latest_message__isnull=True)
+        .select_related("created_by")
+        .prefetch_related(
+            "messages",
+            "messages__created_by",
+            "messages__created_by__profile",
+        )
+    )
     permission_classes = [IsAdminUser]
 
     def get_serializer_class(self):
