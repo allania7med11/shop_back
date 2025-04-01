@@ -9,7 +9,7 @@ from langchain_community.vectorstores import FAISS
 
 from products.models import Product
 
-from .embed import build_product_documents
+from .embed import build_product_documents, format_product_info
 
 
 class ProductAssistant:
@@ -39,10 +39,8 @@ class ProductAssistant:
         product_info = []
         for doc in docs:
             product = Product.objects.get(slug=doc.metadata["product_slug"])
-            price = f"{product.price.amount} {product.price.currency}"
-            product_info.append(
-                f"- {product.name} (Price: {price})\n" f"  Description: {product.description}\n"
-            )
+            content, _ = format_product_info(product)  # Use common function, ignore metadata
+            product_info.append(content)
         return "\n".join(product_info)
 
     def answer_question(self, question: str) -> str:

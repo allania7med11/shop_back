@@ -4,7 +4,27 @@ from langchain.schema import Document
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 
-from products.models import Category, Product
+from products.models import Product
+
+
+def format_product_info(product: Product) -> tuple[str, dict]:
+    """
+    Common function to format product information.
+    Returns a tuple of (content, metadata)
+    """
+    price: Money = product.price
+    price_str = f"{price.amount} {price.currency}"
+    clean_description = strip_tags(product.description.html)
+
+    content = f"{product.name}\n{clean_description}\nPrice: {price_str}"
+
+    metadata = {
+        "product_slug": product.slug,
+        "category_slug": product.category.slug,
+        "category_name": product.category.name,
+    }
+
+    return content, metadata
 
 
 def build_product_documents():
@@ -16,16 +36,7 @@ def build_product_documents():
     products = Product.objects.select_related("category").all()
 
     for product in products:
-        price: Money = product.price
-        price_str = f"{price.amount} {price.currency}"  # Clean price
-        clean_description = strip_tags(product.description.html)
-        content = f"{product.name}\n{clean_description}\nPrice: {price_str}"
-        category: Category = product.category
-        metadata = {
-            "product_slug": product.slug,
-            "category_slug": category.slug,
-            "category_name": category.name,
-        }
+        content, metadata = format_product_info(product)
         docs.append(Document(page_content=content, metadata=metadata))
 
     return docs
