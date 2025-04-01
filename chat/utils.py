@@ -1,6 +1,7 @@
+from django.contrib.auth.models import User
 from django.db import transaction
 
-from authentication.models import GuestUser
+from authentication.models import GuestUser, UserProfile
 from chat.models import Chat, Message
 from chat.signals import update_latest_message
 
@@ -130,3 +131,30 @@ def get_or_create_current_chat_by_scope(scope):
         guest_token = guest_user.token
 
     return get_or_create_current_chat(user, guest_token)
+
+
+def get_or_create_chatbot_user():
+    """
+    Retrieve or create a user instance representing the chatbot.
+
+    Returns:
+    - User: The chatbot user instance.
+    """
+    # Check if the chatbot user already exists
+    chatbot_user, created = User.objects.get_or_create(
+        username="chatbot",
+        defaults={
+            "first_name": "Chat",
+            "last_name": "Bot",
+        },
+    )
+
+    # Create UserProfile if it doesn't exist, with is_chatbot=True
+    UserProfile.objects.get_or_create(user=chatbot_user, defaults={"is_chatbot": True})
+
+    if created:
+        print("Chatbot user created successfully.")
+    else:
+        print("Chatbot user already exists.")
+
+    return chatbot_user
