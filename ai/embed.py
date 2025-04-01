@@ -1,3 +1,5 @@
+from typing import Dict, Tuple
+
 from django.utils.html import strip_tags
 from djmoney.money import Money
 from langchain.schema import Document
@@ -7,7 +9,7 @@ from langchain_community.vectorstores import FAISS
 from products.models import Product
 
 
-def format_product_info(product: Product) -> tuple[str, dict]:
+def format_product_info(product: Product) -> Tuple[str, Dict]:
     """
     Common function to format product information.
     Returns a tuple of (content, metadata)

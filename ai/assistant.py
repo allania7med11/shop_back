@@ -1,3 +1,6 @@
+import datetime
+from dataclasses import dataclass
+from enum import Enum
 from typing import List
 
 from django.conf import settings
@@ -10,6 +13,19 @@ from langchain_community.vectorstores import FAISS
 from products.models import Product
 
 from .embed import build_product_documents, format_product_info
+
+
+class CreatedByType(Enum):
+    CLIENT = "client"
+    ADMIN = "admin"
+    CHATBOT = "chatbot"
+
+
+@dataclass
+class ChatHistoryMessage:
+    content: str
+    created_by: CreatedByType
+    created_at: datetime
 
 
 class ProductAssistant:
@@ -43,13 +59,19 @@ class ProductAssistant:
             product_info.append(content)
         return "\n".join(product_info)
 
-    def answer_question(self, question: str) -> str:
-        """Generate an answer to a customer question about products."""
-        # Get relevant products
-        relevant_docs = self._get_relevant_products(question)
-        product_info = self._format_product_info(relevant_docs)
+    def answer_question(self, chat_history: List[ChatHistoryMessage]) -> str:
+        """
+        Generate an answer to a customer question about products.
 
-        # Create the prompt template
+        Parameters:
+        - chat_history: A list of ChatHistoryMessage instances representing
+                        the conversation history.
+        """
+        if not chat_history:
+            return "No question provided."
+
+        # Build the prompt with full chat context
+        context_str = self.build_context(chat_history)
         prompt = ChatPromptTemplate.from_messages(
             [
                 (
@@ -62,9 +84,7 @@ class ProductAssistant:
                 ),
                 (
                     "user",
-                    """Question: {question}
-            Relevant products:
-            {product_info}
+                    f"""{context_str}
             Please provide a helpful response to the customer's question.""",
                 ),
             ]
@@ -72,6 +92,31 @@ class ProductAssistant:
 
         # Generate the response
         chain = prompt | self.llm
-        response = chain.invoke({"question": question, "product_info": product_info})
+        response = chain.invoke({})
 
         return response.content
+
+    def build_context(self, chat_history: List[ChatHistoryMessage]) -> str:
+        """
+        Construct the context from chat history.
+
+        Parameters:
+        - chat_history: A list of ChatHistoryMessage instances.
+
+        Returns:
+        - A string representing the formatted chat history for context.
+        """
+        context_lines = []
+        for msg in chat_history:
+            if msg.created_by == CreatedByType.CLIENT:
+                role = "Client"
+            elif msg.created_by == CreatedByType.ADMIN:
+                role = "Admin"
+            elif msg.created_by == CreatedByType.CHATBOT:
+                role = "Chatbot (previous AI response)"
+            else:
+                role = "Unknown"
+
+            context_lines.append(f"{role} ({msg.created_at}): {msg.content}")
+
+        return "\n".join(context_lines)
