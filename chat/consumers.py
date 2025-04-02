@@ -39,9 +39,9 @@ class ChatConsumer(WebsocketConsumer):
                 chat=self.chat, created_by=self.chat.created_by, content=content
             )
             # Refresh chat to include the new message
-            updated_chat = message.chat.refresh_from_db()
+            self.chat.refresh_from_db()
             # Get AI response based on the chat messages.
-            ai_message = get_ai_response_from_chat(updated_chat)
+            ai_message = get_ai_response_from_chat(self.chat)
 
             # Serialize and broadcast both the client and AI messages
             serialized_client_message = MessageSerializer(message).data
