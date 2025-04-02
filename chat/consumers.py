@@ -34,30 +34,37 @@ class ChatConsumer(WebsocketConsumer):
                 self.send(text_data=json.dumps({"error": "Message content is required"}))
                 return
 
-            # Create a new message from the client
+            # Create and send client message immediately
             message = Message.objects.create(
                 chat=self.chat, created_by=self.chat.created_by, content=content
             )
-            # Refresh chat to include the new message
-            self.chat.refresh_from_db()
-            # Get AI response based on the chat messages.
-            ai_message = get_ai_response_from_chat(self.chat)
-
-            # Serialize and broadcast both the client and AI messages
             serialized_client_message = MessageSerializer(message).data
-            serialized_ai_message = MessageSerializer(ai_message).data
-
             async_to_sync(self.channel_layer.group_send)(
                 self.room_group_name, {"type": "chat_message", "data": serialized_client_message}
             )
-            async_to_sync(self.channel_layer.group_send)(
-                self.room_group_name, {"type": "chat_message", "data": serialized_ai_message}
-            )
+
+            # Start AI response generation in a separate thread
+            import threading
+
+            thread = threading.Thread(target=self.handle_ai_response)
+            thread.start()
 
         except json.JSONDecodeError:
             self.send(text_data=json.dumps({"error": "Invalid JSON format"}))
         except Exception as e:
             self.send(text_data=json.dumps({"error": f"An error occurred: {str(e)}"}))
+
+    def handle_ai_response(self):
+        """Handle AI response generation in a separate thread."""
+        try:
+            self.chat.refresh_from_db()
+            ai_message = get_ai_response_from_chat(self.chat)
+            serialized_ai_message = MessageSerializer(ai_message).data
+            async_to_sync(self.channel_layer.group_send)(
+                self.room_group_name, {"type": "chat_message", "data": serialized_ai_message}
+            )
+        except Exception as e:
+            self.send(text_data=json.dumps({"error": f"AI response error: {str(e)}"}))
 
     def chat_message(self, event):
         """Handles broadcasting messages to WebSocket clients."""
