@@ -39,10 +39,8 @@ class ProductAssistant:
     def _initialize_vectorstore(self) -> FAISS:
         """Initialize or load the vector store with product data."""
         try:
-            # Try to load existing index
             return FAISS.load_local("product_index", self.embeddings)
         except (FileNotFoundError, ValueError):
-            # If no index exists, create new one
             documents = build_product_documents()
             return FAISS.from_documents(documents, self.embeddings)
 
@@ -55,37 +53,57 @@ class ProductAssistant:
         product_info = []
         for doc in docs:
             product = Product.objects.get(slug=doc.metadata["product_slug"])
-            content, _ = format_product_info(product)  # Use common function, ignore metadata
+            content, _ = format_product_info(product)
             product_info.append(content)
         return "\n".join(product_info)
 
     def answer_question(self, chat_history: List[ChatHistoryMessage]) -> str:
         """
         Generate an answer to a customer question about products.
-
-        Parameters:
-        - chat_history: A list of ChatHistoryMessage instances representing
-                        the conversation history.
         """
         if not chat_history:
             return "No question provided."
 
-        # Build the prompt with full chat context
-        context_str = self.build_context(chat_history)
+        # Get the last user message
+        last_message = next(
+            msg for msg in reversed(chat_history) if msg.created_by == CreatedByType.CLIENT
+        )
+
+        # Get relevant products based on the question
+        relevant_products = self._get_relevant_products(last_message.content)
+        if not relevant_products:
+            return (
+                "I apologize, but I couldn't find any products matching your question. "
+                "Could you please rephrase or ask about something else?"
+            )
+
+        # Format product information and chat context
+        product_info = self._format_product_info(relevant_products)
+        chat_context = self.build_context(chat_history)
+
+        # Build the prompt with product info, chat context, and web info
         prompt = ChatPromptTemplate.from_messages(
             [
                 (
                     "system",
-                    """You are a helpful shopping assistant for an e-commerce store.
-            Your role is to help customers find products that match their needs.
-            Use the provided product information to give accurate, helpful responses.
-            If no products match the criteria, say so politely.
-            Always mention specific products and their prices when relevant.""",
+                    """You are a helpful shopping assistant. Follow these rules:
+                1. Use 1-2 short sentences only
+                2. Only state key product specs from the description
+                3. Use simple, clear language
+                4. End with a brief question
+                5. Stay under 30 words total
+
+                Example format:
+                [Key product specs] Would you like to know about [feature]?""",
                 ),
                 (
                     "user",
-                    f"""{context_str}
-            Please provide a helpful response to the customer's question.""",
+                    f"""Chat History:
+                {chat_context}
+                Product Information:
+                {product_info}
+                Customer Question: {last_message.content}
+                Please provide a helpful response.""",
                 ),
             ]
         )
