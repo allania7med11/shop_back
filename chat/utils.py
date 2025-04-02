@@ -1,6 +1,7 @@
 from django.contrib.auth.models import User
 from django.db import transaction
 
+from ai.assistant import ChatHistoryMessage, CreatedByType, ProductAssistant
 from authentication.models import GuestUser, UserProfile
 from chat.models import Chat, Message
 from chat.signals import update_latest_message
@@ -136,25 +137,56 @@ def get_or_create_current_chat_by_scope(scope):
 def get_or_create_chatbot_user():
     """
     Retrieve or create a user instance representing the chatbot.
-
-    Returns:
-    - User: The chatbot user instance.
+    Returns first chatbot user found or creates new one if none exists.
     """
-    # Check if the chatbot user already exists
-    chatbot_user, created = User.objects.get_or_create(
-        username="chatbot",
-        defaults={
-            "first_name": "Chat",
-            "last_name": "Bot",
-        },
+    chatbot_profile = UserProfile.objects.filter(is_chatbot=True).first()
+
+    if not chatbot_profile:
+        chatbot_user = User.objects.create(
+            username="chatbot",
+            first_name="Chat",
+            last_name="Bot",
+        )
+        chatbot_profile = UserProfile.objects.create(user=chatbot_user, is_chatbot=True)
+
+    return chatbot_profile.user
+
+
+def get_message_creator_type(chat, message_creator):
+    """
+    Determine the type of message creator.
+    Returns client, chatbot or admin.
+    """
+    return (
+        CreatedByType.CLIENT
+        if chat.created_by == message_creator
+        else (
+            CreatedByType.CHATBOT
+            if message_creator.profile and message_creator.profile.is_chatbot
+            else CreatedByType.ADMIN
+        )
     )
 
-    # Create UserProfile if it doesn't exist, with is_chatbot=True
-    UserProfile.objects.get_or_create(user=chatbot_user, defaults={"is_chatbot": True})
 
-    if created:
-        print("Chatbot user created successfully.")
-    else:
-        print("Chatbot user already exists.")
+def get_ai_response_from_chat(chat):
+    """Generate AI response based on chat message history."""
+    try:
+        # Get chat history
+        chat_history = [
+            ChatHistoryMessage(
+                content=msg.content,
+                created_by=get_message_creator_type(chat, msg.created_by),
+                created_at=msg.created_at,
+            )
+            for msg in chat.messages.all()
+        ]
+        # Get chatbot user
+        chatbot_user = get_or_create_chatbot_user()
+        # Get AI response
+        assistant = ProductAssistant()
+        ai_response = assistant.answer_question(chat_history)
+        # Create AI message
+        return Message.objects.create(chat=chat, created_by=chatbot_user, content=ai_response)
 
-    return chatbot_user
+    except Exception as e:
+        raise Exception(f"Failed to generate AI response: {str(e)}")

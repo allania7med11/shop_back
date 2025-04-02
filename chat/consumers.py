@@ -6,7 +6,7 @@ from django.contrib.auth.models import AnonymousUser
 
 from chat.models import Chat, Message
 from chat.serializers import MessageSerializer
-from chat.utils import get_or_create_current_chat_by_scope
+from chat.utils import get_ai_response_from_chat, get_or_create_current_chat_by_scope
 
 
 class ChatConsumer(WebsocketConsumer):
@@ -34,20 +34,30 @@ class ChatConsumer(WebsocketConsumer):
                 self.send(text_data=json.dumps({"error": "Message content is required"}))
                 return
 
+            # Create a new message from the client
             message = Message.objects.create(
                 chat=self.chat, created_by=self.chat.created_by, content=content
             )
+            # Refresh chat to include the new message
+            updated_chat = message.chat.refresh_from_db()
+            # Get AI response based on the chat messages.
+            ai_message = get_ai_response_from_chat(updated_chat)
 
-            # Serialize and broadcast the message
-            serialized_message = MessageSerializer(message).data
+            # Serialize and broadcast both the client and AI messages
+            serialized_client_message = MessageSerializer(message).data
+            serialized_ai_message = MessageSerializer(ai_message).data
+
             async_to_sync(self.channel_layer.group_send)(
-                self.room_group_name, {"type": "chat_message", "data": serialized_message}
+                self.room_group_name, {"type": "chat_message", "data": serialized_client_message}
+            )
+            async_to_sync(self.channel_layer.group_send)(
+                self.room_group_name, {"type": "chat_message", "data": serialized_ai_message}
             )
 
         except json.JSONDecodeError:
             self.send(text_data=json.dumps({"error": "Invalid JSON format"}))
-        except Exception:
-            self.send(text_data=json.dumps({"error": "An error occurred"}))
+        except Exception as e:
+            self.send(text_data=json.dumps({"error": f"An error occurred: {str(e)}"}))
 
     def chat_message(self, event):
         """Handles broadcasting messages to WebSocket clients."""
