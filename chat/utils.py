@@ -146,6 +146,7 @@ def get_or_create_chatbot_user():
             username="chatbot",
             first_name="Chat",
             last_name="Bot",
+            email="chatbot@example.com",
         )
         chatbot_profile = UserProfile.objects.create(user=chatbot_user, is_chatbot=True)
 
