@@ -21,3 +21,23 @@ class Message(models.Model):
 
     class Meta:
         ordering = ["created_at"]
+
+
+class ChatSettings(models.Model):
+    ai_for_clients = models.BooleanField(
+        default=False, help_text="Enable AI responses for non-staff users' chats"
+    )
+
+    class Meta:
+        verbose_name = "Chat Settings"
+        verbose_name_plural = "Chat Settings"
+
+    def save(self, *args, **kwargs):
+        # Ensure only one instance exists
+        self.__class__.objects.exclude(id=self.id).delete()
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_settings(cls):
+        settings, _ = cls.objects.get_or_create(id=1)
+        return settings

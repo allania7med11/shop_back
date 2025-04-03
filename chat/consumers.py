@@ -4,7 +4,7 @@ from asgiref.sync import async_to_sync
 from channels.generic.websocket import WebsocketConsumer
 from django.contrib.auth.models import AnonymousUser
 
-from chat.models import Chat, Message
+from chat.models import Chat, ChatSettings, Message
 from chat.serializers import MessageSerializer
 from chat.utils import get_ai_response_from_chat, get_or_create_current_chat_by_scope
 
@@ -43,11 +43,28 @@ class ChatConsumer(WebsocketConsumer):
                 self.room_group_name, {"type": "chat_message", "data": serialized_client_message}
             )
 
-            # Start AI response generation in a separate thread
-            import threading
+            # Get global AI response setting
+            settings = ChatSettings.get_settings()
 
-            thread = threading.Thread(target=self.handle_ai_response)
-            thread.start()
+            # Generate AI response if:
+            # 1. Chat owner is staff (includes admins) OR
+            # 2. Global AI responses are enabled for regular clients
+            if self.chat.created_by.is_staff or settings.ai_for_clients:
+                # Send loading message
+                loading_message = {
+                    "type": "loading_status",
+                    "status": "typing",
+                    "message": "AI is thinking...",
+                }
+                async_to_sync(self.channel_layer.group_send)(
+                    self.room_group_name, {"type": "loading_message", "data": loading_message}
+                )
+
+                # Start AI response generation in a separate thread
+                import threading
+
+                thread = threading.Thread(target=self.handle_ai_response)
+                thread.start()
 
         except json.JSONDecodeError:
             self.send(text_data=json.dumps({"error": "Invalid JSON format"}))
