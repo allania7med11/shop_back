@@ -129,3 +129,4 @@ virtualenv==20.21.1
 yarl==1.15.2
 zipp==3.8.0
 zope.interface==7.2
+celery==5.3.6
