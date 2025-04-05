@@ -17,7 +17,6 @@
       "django": true,
       "justMyCode": true,
       "envFile": "${workspaceFolder}/.env"
-
     },
     {
       "name": "Shop_Back: Shell",
@@ -25,7 +24,7 @@
       "request": "launch",
       "program": "${workspaceFolder}/manage.py",
       "args": [
-        "runscripts" // shell_plus, runscripts 
+        "shell_plus" // shell_plus, runscripts 
       ],
       "django": true,
       "justMyCode": true
@@ -71,5 +70,20 @@
       "django": true,
       "justMyCode": true
     },
+    {
+      "name": "Shop_Back: Run Celery Worker",
+      "type": "python",
+      "request": "launch",
+      "module": "celery",
+      "console": "integratedTerminal",
+      "args": [
+        "-A",
+        "shop_back",
+        "worker",
+        "-l",
+        "DEBUG"
+      ],
+      "justMyCode": true
+    }
   ]
 }

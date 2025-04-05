@@ -86,6 +86,7 @@ INSTALLED_APPS = [
     "core",
     "products",
     "chat",
+    "ai",
 ]
 
 
@@ -284,3 +285,11 @@ STRIPE_SECRET_KEY = env.str("STRIPE_SECRET_KEY", default="")
 STRIPE_PUBLISHABLE_KEY = env.str("STRIPE_PUBLISHABLE_KEY", default="")
 
 OPENAI_API_KEY = env.str("OPENAI_API_KEY", default="")
+
+# Celery Configuration
+CELERY_BROKER_URL = REDIS_URL
+CELERY_RESULT_BACKEND = REDIS_URL
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = TIME_ZONE
