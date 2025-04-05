@@ -86,6 +86,7 @@ INSTALLED_APPS = [
     "core",
     "products",
     "chat",
+    "ai",
 ]
 
 
