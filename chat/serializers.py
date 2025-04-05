@@ -1,4 +1,5 @@
 from django.contrib.auth.models import User
+from django.templatetags.static import static
 from rest_framework import serializers
 
 from authentication.models import GuestUser
@@ -18,7 +19,10 @@ class ChatUserProfileSerializer(serializers.ModelSerializer):
     def get_profile_photo(self, obj):
         """Retrieve profile photo from the related UserProfile model."""
         if hasattr(obj, "profile"):
-            return obj.profile.profile_photo.url if obj.profile.profile_photo else None
+            if obj.profile.profile_photo:
+                return obj.profile.profile_photo.url
+            elif obj.profile.is_chatbot:
+                return static("chat/img/chatbot_profile.png")  # Uses Django's static file handling
         return None
 
 
