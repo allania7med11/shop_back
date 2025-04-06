@@ -1,29 +1,63 @@
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 from django.utils.html import strip_tags
-from djmoney.money import Money
 from langchain.schema import Document
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
+from rest_framework.request import Request
+from rest_framework.test import APIRequestFactory
 
 from products.models import Product
+from products.serializers import ProductSerializer
 
 
-def format_product_info(product: Product) -> Tuple[str, Dict]:
+def format_product_info(product: Product, request: Optional[Request] = None) -> Tuple[str, Dict]:
     """
-    Common function to format product information.
-    Returns a tuple of (content, metadata)
+    Common function to format product information using the ProductSerializer.
+    Returns a tuple of (content, metadata).
+
+    :param product: The product instance to format.
+    :param request: The request object (optional).
+    :return: A tuple containing the formatted content and metadata.
     """
-    price: Money = product.price
-    price_str = f"{price.amount} {price.currency}"
-    clean_description = strip_tags(product.description.html)
+    # If no request is provided, create a mock request
+    if request is None:
+        factory = APIRequestFactory()
+        request = factory.get("/")  # Create a mock GET request
 
-    content = f"{product.name}\n{clean_description}\nPrice: {price_str}"
+    # Serialize the product instance with the request context
+    serializer = ProductSerializer(product, context={"request": request})
+    product_data = serializer.data
 
+    # Clean the description HTML
+    clean_description = strip_tags(product_data["description_html"])
+
+    # Convert current_price to float
+    current_price = float(product_data["current_price"])
+
+    # Create the content string
+    content = (
+        f"{product_data['name']}\n"
+        f"Original Price: {product_data['price']} {product_data['price_currency']}\n"
+        # Format to 2 decimal places
+        f"Discounted Price: {current_price:.2f} {product_data['price_currency']}\n"
+    )
+
+    # Include discount information in the content
+    discount_info = product_data["discount"]
+    if discount_info and discount_info["active"]:
+        content += f"Discount: {discount_info['name']} - {discount_info['percent']}%\n"
+
+    content += f"Category: {product_data['category']['name']}\n" f"Description: {clean_description}"
+
+    # Prepare metadata
     metadata = {
-        "product_slug": product.slug,
-        "category_slug": product.category.slug,
-        "category_name": product.category.name,
+        "product_slug": product_data["slug"],
+        "category_slug": product_data["category"]["slug"],
+        "category_name": product_data["category"]["name"],
+        "discount": discount_info,
+        "current_price": current_price,
+        "price_currency": product_data["price_currency"],
     }
 
     return content, metadata
