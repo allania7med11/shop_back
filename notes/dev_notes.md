@@ -1,4 +1,7 @@
 # 869851tx6
+- Migrations for django_celery_beat
+
+# 869851tx6
 - add env variable:
     - REDIS_URL
 

@@ -30,6 +30,7 @@ click-plugins==1.1.1
 click-repl==0.3.0
 cloudinary==1.41.0
 constantly==23.10.4
+cron-descriptor==1.4.5
 cryptography==43.0.1
 daphne==4.1.2
 dataclasses-json==0.6.7
@@ -40,6 +41,7 @@ distro==1.9.0
 dj-rest-auth==5.0.2
 Django==4.2.19
 django-allauth==0.58.2
+django-celery-beat==2.7.0
 django-cors-headers==3.13.0
 django-environ==0.8.1
 django-extensions==3.1.5
@@ -47,6 +49,7 @@ django-filter==21.1
 django-money==2.1.1
 django-quill-editor==0.1.40
 django-shell-plus==1.1.7
+django-timezone-field==7.1
 djangorestframework==3.14.0
 drf-yasg==1.21.7
 exceptiongroup==1.2.2
@@ -120,6 +123,7 @@ PyJWT==2.9.0
 pyOpenSSL==25.0.0
 pytest==8.3.3
 pytest-django==4.9.0
+python-crontab==3.2.0
 python-dateutil==2.9.0.post0
 python3-openid==3.2.0
 pytz==2022.1
