@@ -3,28 +3,11 @@ import logging
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
+from ai.embed import get_product_signature
 from products.models import Category, Product
 from products.tasks import rebuild_product_index_task
 
 logger = logging.getLogger(__name__)
-
-
-def get_product_signature(product: Product) -> str:
-    """Create a signature of product data that affects AI responses"""
-    try:
-        return (
-            f"{product.name}::{product.price.amount}::{product.price.currency}::"
-            f"{product.description.html}::{product.category.slug}::"
-            f"{product.category.name}::{product.slug}"
-        )
-    except AttributeError as e:
-        # Log the error if needed
-        logger.error(f"Attribute error while creating product signature: {str(e)}")
-        return ""
-    except Exception as e:
-        # Optionally catch other exceptions
-        logger.error(f"An unexpected error occurred: {str(e)}")
-        return ""
 
 
 @receiver(pre_save, sender=Product)

@@ -1,29 +1,30 @@
-from typing import Dict, Optional, Tuple
+import logging
+from typing import Dict, Tuple
 
 from django.utils.html import strip_tags
 from langchain.schema import Document
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
-from rest_framework.request import Request
 from rest_framework.test import APIRequestFactory
 
 from products.models import Product
 from products.serializers import ProductSerializer
 
+# Set up the logger
+logger = logging.getLogger(__name__)
 
-def format_product_info(product: Product, request: Optional[Request] = None) -> Tuple[str, Dict]:
+
+def format_product_info(product: Product) -> Tuple[str, Dict]:
     """
     Common function to format product information using the ProductSerializer.
     Returns a tuple of (content, metadata).
 
     :param product: The product instance to format.
-    :param request: The request object (optional).
     :return: A tuple containing the formatted content and metadata.
     """
     # If no request is provided, create a mock request
-    if request is None:
-        factory = APIRequestFactory()
-        request = factory.get("/")  # Create a mock GET request
+    factory = APIRequestFactory()
+    request = factory.get("/")  # Create a mock GET request
 
     # Serialize the product instance with the request context
     serializer = ProductSerializer(product, context={"request": request})
@@ -61,6 +62,39 @@ def format_product_info(product: Product, request: Optional[Request] = None) -> 
     }
 
     return content, metadata
+
+
+def get_product_signature(product: Product) -> str:
+    """Create a signature of product data that affects AI responses."""
+    try:
+        # Create a mock request for serialization
+        factory = APIRequestFactory()
+        request = factory.get("/")  # Create a mock GET request
+
+        # Serialize the product instance with the request context
+        serializer = ProductSerializer(product, context={"request": request})
+        product_data = serializer.data
+
+        # Clean the description HTML for the signature
+        clean_description = strip_tags(product_data["description_html"])
+
+        # Convert current_price to float
+        current_price = float(product_data["current_price"])
+
+        # Create a unique signature based on relevant fields, including current_price
+        return (
+            f"{product_data['name']}::{product_data['price']}::{product_data['price_currency']}::"
+            f"{clean_description}::{product_data['category']['slug']}::"
+            f"{product_data['category']['name']}::{product_data['slug']}::{current_price:.2f}"
+        )
+    except AttributeError as e:
+        # Log the error if needed
+        logger.error(f"Attribute error while creating product signature: {str(e)}")
+        return ""
+    except Exception as e:
+        # Optionally catch other exceptions
+        logger.error(f"An unexpected error occurred: {str(e)}")
+        return ""
 
 
 def build_product_documents():
