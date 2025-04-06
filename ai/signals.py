@@ -4,7 +4,7 @@ from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
 from ai.embed import get_product_signature
-from products.models import Category, Product
+from products.models import Category, Discount, Product
 from products.tasks import rebuild_product_index_task
 
 logger = logging.getLogger(__name__)
@@ -43,6 +43,13 @@ def handle_category_change(sender, instance, **kwargs):
         schedule_rebuild(f"Category {instance.name} changed affecting products")
 
 
+@receiver(post_save, sender=Discount)
+def handle_discount_change(sender, instance, **kwargs):
+    """Handle discount changes that affect products"""
+    if instance.products.exists():
+        schedule_rebuild(f"Discount {instance.name} changed affecting products")
+
+
 def schedule_rebuild(reason: str):
     """Schedule a delayed rebuild with logging"""
     rebuild_product_index_task.delay(reason)
@@ -54,8 +61,10 @@ def register_product_signals():
 
     Product = apps.get_model("products", "Product")
     Category = apps.get_model("products", "Category")
+    Discount = apps.get_model("products", "Discount")
 
     pre_save.connect(handle_product_pre_save, sender=Product)
     post_save.connect(handle_product_change, sender=Product)
     post_save.connect(handle_category_change, sender=Category)
     post_delete.connect(handle_product_change, sender=Product)
+    post_save.connect(handle_discount_change, sender=Discount)
