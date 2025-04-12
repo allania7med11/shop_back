@@ -5,7 +5,6 @@ echo "COLLECTSTATIC=$COLLECTSTATIC"
 echo "RUN_SCRIPTS=$RUN_SCRIPTS"
 echo "PORT=$PORT"
 
-
 # Proceed with migrations if enabled
 if [ "$MIGRATE" = "True" ]; then
     python manage.py migrate
@@ -31,4 +30,6 @@ elif [ "$ENVIRONMENT" = "prod" ]; then
     daphne -b 0.0.0.0 -p $PORT shop_back.asgi:application
 elif [ "$ENVIRONMENT" = "test" ]; then
     pytest
+elif [ "$ENVIRONMENT" = "celery" ]; then
+    celery -A shop_back worker -l INFO
 fi
