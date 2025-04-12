@@ -114,5 +114,5 @@ def create_vector_index():
     # Convert documents into a FAISS vector index
     vectorstore = FAISS.from_documents(documents, embeddings)
 
-    # Save the index to disk (folder: product_index/)
-    vectorstore.save_local("product_index")
+    # Save the index to disk (folder: vector_index/product_index/)
+    vectorstore.save_local("vector_index/product_index")
