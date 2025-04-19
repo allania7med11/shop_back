@@ -13,6 +13,7 @@ from langchain_community.vectorstores import FAISS
 
 from ai.utils import get_products_index_path
 from products.models import Product
+from products.tasks import rebuild_product_index_task
 
 from .embed import format_product_info
 
@@ -43,22 +44,28 @@ class ProductAssistant:
 
     def _load_vectorstore(self) -> FAISS:
         """
-        Loads the vector store from disk.
-
-        Returns:
-            FAISS: The loaded vector store.
+        Tries to load the vector store. If it fails, schedules a rebuild task.
         """
         try:
             return FAISS.load_local(
                 get_products_index_path(), self.embeddings, allow_dangerous_deserialization=True
             )
         except Exception as e:
-            logger.error(f"Error loading vector store: {e}")
+            logger.warning(f"Vector store failed to load: {e}. Scheduling rebuild.")
+            rebuild_product_index_task.delay(reason="Auto-rebuild after load failure")
             return None
 
     def _get_relevant_products(self, query: str, k: int = 5) -> List[Document]:
         """Retrieve relevant product documents based on the query."""
-        return self.vectorstore.similarity_search(query, k=k)
+        if not self.vectorstore:
+            logger.warning("Vectorstore is not loaded. Skipping similarity search.")
+            return []
+
+        try:
+            return self.vectorstore.similarity_search(query, k=k)
+        except Exception as e:
+            logger.error(f"Error during similarity search: {e}")
+            return []
 
     def _format_product_info(self, docs: List[Document]) -> str:
         """Format product information for the LLM context."""
