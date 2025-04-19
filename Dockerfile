@@ -4,6 +4,10 @@ FROM python:3.8-slim
 ARG DEV_BUILD=False
 ENV DEV_BUILD=$DEV_BUILD
 
+# Define the user ID as a build argument with a default value
+ARG APP_UID=1000
+ENV APP_UID=$APP_UID
+
 # Install system packages and set up locales
 RUN apt-get update && apt-get install -y \
     locales \
@@ -21,8 +25,8 @@ ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
-# Create a non-root user with an explicit UID and adds permission to access the /app folder
-RUN adduser -u 1000 --disabled-password --gecos "" appuser
+# Create a non-root user with the specified UID and adds permission to access the /app folder
+RUN adduser -u $APP_UID --disabled-password --gecos "" appuser
 
 # Install additional packages for development if DEV_BUILD is true
 RUN if [ "$DEV_BUILD" = "true" ]; then \
@@ -35,6 +39,11 @@ ENV PYTHONDONTWRITEBYTECODE=1
 
 # Turns off buffering for easier container logging
 ENV PYTHONUNBUFFERED=1
+
+# Create vector_indexes directory and set permissions
+RUN mkdir -p /vector_indexes/products && \
+    chown -R appuser:appuser /vector_indexes && \
+    chmod 755 /vector_indexes
 
 # Create a virtual environment in the specified path
 RUN python3 -m venv /opt/virtualenvs/production
@@ -56,8 +65,6 @@ COPY . /app
 # Change ownership of the virtual environment and /app directory to the non-root user
 RUN chown -R appuser:appuser /opt/virtualenvs/production /app
 
-# Switch to the non-root user
-USER appuser
 
 # Expose the application port
 EXPOSE 8000

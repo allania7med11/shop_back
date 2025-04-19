@@ -1,4 +1,5 @@
 import datetime
+import logging
 from dataclasses import dataclass
 from enum import Enum
 from typing import List
@@ -10,9 +11,13 @@ from langchain_community.chat_models import ChatOpenAI
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 
+from ai.utils import get_products_index_path
 from products.models import Product
 
-from .embed import build_product_documents, format_product_info
+from .embed import format_product_info
+
+# Set up the logger
+logger = logging.getLogger(__name__)
 
 
 class CreatedByType(Enum):
@@ -34,15 +39,22 @@ class ProductAssistant:
         self.llm = ChatOpenAI(
             model="gpt-4-turbo-preview", temperature=0.7, openai_api_key=settings.OPENAI_API_KEY
         )
-        self.vectorstore = self._initialize_vectorstore()
+        self.vectorstore = self._load_vectorstore()
 
-    def _initialize_vectorstore(self) -> FAISS:
-        """Initialize or load the vector store with product data."""
+    def _load_vectorstore(self) -> FAISS:
+        """
+        Loads the vector store from disk.
+
+        Returns:
+            FAISS: The loaded vector store.
+        """
         try:
-            return FAISS.load_local("product_index", self.embeddings)
-        except (FileNotFoundError, ValueError):
-            documents = build_product_documents()
-            return FAISS.from_documents(documents, self.embeddings)
+            return FAISS.load_local(
+                get_products_index_path(), self.embeddings, allow_dangerous_deserialization=True
+            )
+        except Exception as e:
+            logger.error(f"Error loading vector store: {e}")
+            return None
 
     def _get_relevant_products(self, query: str, k: int = 5) -> List[Document]:
         """Retrieve relevant product documents based on the query."""

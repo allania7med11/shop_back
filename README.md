@@ -22,6 +22,7 @@ This project uses a `.env` file to configure its environment. You can create a `
 - `ENVIRONMENT`: Specifies the current environment (e.g., 'debug', 'dev', 'prod').
 - `MIGRATE`: Controls whether The container will run migrate upon instantiation.
 - `COLLECTSTATIC`: Controls whether The container will generate a static folder upon instantiation.
+- `RUN_SCRIPTS`: Controls whether additional scripts will be executed upon container instantiation.
 - `PORT`: Defines the port on which the application will listen.
 - `DJANGO_DEBUG`: Controls whether Django should run in debug mode (True/False).
 - `DJANGO_CORS_ALLOW_ALL_ORIGINS`: Allows cross-origin requests for development (True/False).
@@ -44,9 +45,6 @@ This project uses a `.env` file to configure its environment. You can create a `
 - `SENTRY_DSN`: Your Sentry Data Source Name used for error tracking and monitoring in your application.
 - `REDIS_URL`: The connection URL for Redis, used as a caching layer and message broker in your application.
 - `OPENAI_API_KEY`: Your OpenAI API key used to authenticate requests to OpenAI's language models for AI-powered responses. 
-
-
-
 
 Make sure to update these values to match your specific environment configuration. You can check .env.example for reference.
 

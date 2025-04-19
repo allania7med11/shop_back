@@ -7,9 +7,7 @@ class Command(BaseCommand):
     help = "Command to run list of commands for each deploy"
 
     scripts = [
-        Script("add_products_from_dummyjson"),
-        Script("add_products_from_api"),
-        Script("update_categories"),
+        Script("create_rebuild_task"),
     ]
 
     def handle(self, *args, **options):
