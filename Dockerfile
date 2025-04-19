@@ -1,7 +1,7 @@
 # For more information, please refer to https://aka.ms/vscode-docker-python
 FROM python:3.8-slim 
 
-ARG DEV_BUILD=False
+ARG DEV_BUILD=false
 ENV DEV_BUILD=$DEV_BUILD
 
 # Define the user ID as a build argument with a default value

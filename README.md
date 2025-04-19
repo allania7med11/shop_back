@@ -24,12 +24,12 @@ This project uses a `.env` file to configure its environment. You can create a `
 - `COLLECTSTATIC`: Controls whether The container will generate a static folder upon instantiation.
 - `RUN_SCRIPTS`: Controls whether additional scripts will be executed upon container instantiation.
 - `PORT`: Defines the port on which the application will listen.
-- `DJANGO_DEBUG`: Controls whether Django should run in debug mode (True/False).
-- `DJANGO_CORS_ALLOW_ALL_ORIGINS`: Allows cross-origin requests for development (True/False).
+- `DJANGO_DEBUG`: Controls whether Django should run in debug mode (true/false).
+- `DJANGO_CORS_ALLOW_ALL_ORIGINS`: Allows cross-origin requests for development (true/false).
 - `DJANGO_SECRET_KEY`: Django application's secret key for security. Please keep this confidential.
 - `DJANGO_ALLOWED_HOSTS`: Configures allowed hosts for the Django application (comma-separated).
 - `DJANGO_CSRF_TRUSTED_ORIGINS`: List of trusted origins for CSRF protection (comma-separated).
-- `DJANGO_CORS_ALLOW_CREDENTIALS`: Specifies whether to allow credentials for cross-origin requests (True/False).
+- `DJANGO_CORS_ALLOW_CREDENTIALS`: Specifies whether to allow credentials for cross-origin requests (true/false).
 - `DJANGO_DEFAULT_FROM_EMAIL`: Default email address used in the From: header of outgoing emails. This address can take any format valid in the chosen email sending protocol.
 - `POSTGRES_NAME`: The name of the PostgreSQL database for the application.
 - `POSTGRES_USER`: The PostgreSQL database user.
