@@ -1,4 +1,19 @@
 #!/bin/sh
+
+# Check if running as root and switch to appuser if needed
+if [ "$(id -u)" = "0" ]; then
+    # Fix permissions for vector_indexes directory if needed
+    if [ -d "/vector_indexes" ]; then
+        echo "Fixing permissions for /vector_indexes directory..."
+        chown -R appuser:appuser /vector_indexes
+        chmod 755 /vector_indexes
+    fi
+
+    # Switch to appuser and re-execute this script
+    echo "Switching to appuser"
+    exec su appuser -c "$0"
+fi
+
 echo "ENVIRONMENT=$ENVIRONMENT"
 echo "MIGRATE=$MIGRATE"
 echo "COLLECTSTATIC=$COLLECTSTATIC"

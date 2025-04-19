@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 
-from ai.embed import create_vector_index
+from ai.embed import create_vector_indexes
 
 
 class Command(BaseCommand):
@@ -8,5 +8,5 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.stdout.write("Rebuilding product vector index...")
-        create_vector_index()
+        create_vector_indexes()
         self.stdout.write(self.style.SUCCESS("Successfully rebuilt product vector index"))

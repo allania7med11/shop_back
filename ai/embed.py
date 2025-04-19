@@ -7,6 +7,7 @@ from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from rest_framework.test import APIRequestFactory
 
+from ai.utils import get_products_index_path
 from products.models import Product
 from products.serializers import ProductSerializer
 
@@ -102,7 +103,7 @@ def build_product_documents():
     return docs
 
 
-def create_vector_index():
+def create_vector_indexes():
     """
     Builds a FAISS vector index from product documents and saves it locally.
     """
@@ -114,5 +115,5 @@ def create_vector_index():
     # Convert documents into a FAISS vector index
     vectorstore = FAISS.from_documents(documents, embeddings)
 
-    # Save the index to disk (folder: product_index/)
-    vectorstore.save_local("product_index")
+    # Save the index to disk
+    vectorstore.save_local(get_products_index_path())
