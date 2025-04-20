@@ -55,14 +55,18 @@ class ProductAssistant:
             rebuild_product_index_task.delay(reason="Auto-rebuild after load failure")
             return None
 
-    def _get_relevant_products(self, query: str, k: int = 5) -> List[Document]:
-        """Retrieve relevant product documents based on the query."""
+    def _get_relevant_products(self, chat_context: str, k: int = 5) -> List[Document]:
+        """
+        Retrieve relevant product documents based on the chat context.
+        This helps identify products mentioned in the conversation.
+        """
         if not self.vectorstore:
             logger.warning("Vectorstore is not loaded. Skipping similarity search.")
             return []
 
         try:
-            return self.vectorstore.similarity_search(query, k=k)
+            results = self.vectorstore.similarity_search(chat_context, k=k)
+            return results
         except Exception as e:
             logger.error(f"Error during similarity search: {e}")
             return []
@@ -83,22 +87,19 @@ class ProductAssistant:
         if not chat_history:
             return "No question provided."
 
-        # Get the last user message
-        last_message = next(
-            msg for msg in reversed(chat_history) if msg.created_by == CreatedByType.CLIENT
-        )
+        # Build the chat context once and reuse it
+        chat_context = self.build_context(chat_history)
 
-        # Get relevant products based on the question
-        relevant_products = self._get_relevant_products(last_message.content)
+        # Get relevant products based on the chat context
+        relevant_products = self._get_relevant_products(chat_context)
         if not relevant_products:
             return (
                 "I apologize, but I couldn't find any products matching your question. "
                 "Could you please rephrase or ask about something else?"
             )
 
-        # Format product information and chat context
+        # Format product information
         product_info = self._format_product_info(relevant_products)
-        chat_context = self.build_context(chat_history)
 
         # Build the prompt with product info, chat context, and web info
         prompt = ChatPromptTemplate.from_messages(
@@ -121,7 +122,7 @@ class ProductAssistant:
                 {chat_context}
                 Product Information:
                 {product_info}
-                Customer Question: {last_message.content}
+                Customer Question: {chat_history[-1].content}
                 Please provide a helpful response.""",
                 ),
             ]
