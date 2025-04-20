@@ -14,26 +14,14 @@ from chat.utils import (
 )
 
 
-class ChatConsumer(WebsocketConsumer):
-    def connect(self):
-        """Handles WebSocket connection and assigns the chat room."""
-        self.chat = get_or_create_current_chat_by_scope(self.scope)  # Always returns a valid chat
-        if not self.chat:
-            self.close()
-            return
-
-        self.room_name = f"chat_{self.chat.id}"
-        self.room_group_name = self.room_name
-
-        async_to_sync(self.channel_layer.group_add)(self.room_group_name, self.channel_name)
-
-        self.accept()
+class BaseChatConsumer(WebsocketConsumer):
+    """Base class for chat consumers with shared functionality."""
 
     def create_websocket_message(
         self, message_type: str, message: Message, is_typing: bool = None
     ) -> dict:
         """Create a consistent websocket message structure"""
-        payload = {"message": MessageSerializer(message).data}
+        payload = {"message": MessageSerializer(message, context={"scope": self.scope}).data}
         if is_typing is not None:
             payload["is_typing"] = is_typing
 
@@ -49,6 +37,26 @@ class ChatConsumer(WebsocketConsumer):
             self.room_group_name,
             self.create_websocket_message("typing", typing_message, is_typing=is_typing),
         )
+
+    def chat_message(self, event):
+        """Handles broadcasting messages to WebSocket clients."""
+        self.send(text_data=json.dumps({"data": event["data"]}))
+
+
+class ChatConsumer(BaseChatConsumer):
+    def connect(self):
+        """Handles WebSocket connection and assigns the chat room."""
+        self.chat = get_or_create_current_chat_by_scope(self.scope)  # Always returns a valid chat
+        if not self.chat:
+            self.close()
+            return
+
+        self.room_name = f"chat_{self.chat.id}"
+        self.room_group_name = self.room_name
+
+        async_to_sync(self.channel_layer.group_add)(self.room_group_name, self.channel_name)
+
+        self.accept()
 
     def receive(self, text_data):
         """Handles receiving a message via WebSocket."""
@@ -106,12 +114,8 @@ class ChatConsumer(WebsocketConsumer):
             self.send_typing_status(is_typing=False)  # Stop typing on error
             self.send(text_data=json.dumps({"error": f"AI response error: {str(e)}"}))
 
-    def chat_message(self, event):
-        """Handles broadcasting messages to WebSocket clients."""
-        self.send(text_data=json.dumps({"data": event["data"]}))
 
-
-class AdminChatConsumer(WebsocketConsumer):
+class AdminChatConsumer(BaseChatConsumer):
     def connect(self):
         """Handles WebSocket connection for admins (only superadmins allowed)."""
         self.user = self.scope["user"]
@@ -152,17 +156,12 @@ class AdminChatConsumer(WebsocketConsumer):
 
             message = Message.objects.create(chat=self.chat, created_by=self.user, content=content)
 
-            # Serialize and broadcast the message
-            serialized_message = MessageSerializer(message, context={"scope": self.scope}).data
+            # Use the consistent message format from the base class
             async_to_sync(self.channel_layer.group_send)(
-                self.room_group_name, {"type": "chat_message", "data": serialized_message}
+                self.room_group_name, self.create_websocket_message("message", message)
             )
 
         except json.JSONDecodeError:
             self.send(text_data=json.dumps({"error": "Invalid JSON format"}))
-        except Exception:
-            self.send(text_data=json.dumps({"error": "An error occurred"}))
-
-    def chat_message(self, event):
-        """Handles broadcasting messages to WebSocket clients."""
-        self.send(text_data=json.dumps({"data": event["data"]}))
+        except Exception as e:
+            self.send(text_data=json.dumps({"error": f"An error occurred: {str(e)}"}))
