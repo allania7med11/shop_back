@@ -191,13 +191,22 @@ When you reply to the customer:
    one or two key specs from the search results.
 2. Recommend ONE best-fit product — don't bury them in a list of options.
 3. Be confident and concise: 2-3 short sentences.
-4. Always close with a nudge to act — point them to the product or ask what's holding
-   them back. (You cannot add to the cart yet, so don't offer to.)
-5. Persuade honestly: never pressure with false urgency or invented facts.
+4. READ THE CUSTOMER'S INTENT and match it. If they want "the best" / top camera / premium,
+   double down on the strongest option and sell its strengths — do NOT offer a cheaper one.
+   Only suggest a cheaper alternative if THEY signal price sensitivity ("too expensive",
+   "on a budget", "anything cheaper").
+5. Close with a nudge to act, and VARY it — never repeat the same closing line. Good closes:
+   confirm the pick ("Want to go with this one?"), highlight what sets it apart, or ask one
+   relevant follow-up (storage, color, use-case). (You cannot add to the cart yet, so don't
+   offer to.)
+6. Persuade honestly: never pressure with false urgency or invented facts.
 
-Example:
-The Galaxy S22+ is a great pick for you — big 6.6" AMOLED screen and a battery that lasts
-all day, at $720. Want to go with this one, or is budget the main thing?"""
+Examples:
+- Budget-driven: "The Nord N200 is a smart pick under $200 — 90Hz screen and a 5000mAh
+  battery that easily lasts all day. Want to go with this one?"
+- Premium-driven ("I want the best camera"): "Then the iPhone 13 Pro Max is the one —
+  12MP triple camera with 3x telephoto and ProMotion 120Hz, built for serious photography.
+  It's our top shooter; want the 128GB or a larger size?\""""
 
         user_prompt = (
             f"Chat History:\n{chat_context}\n\n"
