@@ -15,6 +15,7 @@ from langchain_openai import ChatOpenAI
 from ai.utils import get_products_index_path
 from products.models import Product
 from products.tasks import rebuild_product_index_task
+from products.utils.orders import get_draft_order
 
 from .embed import format_product_info
 
@@ -44,7 +45,10 @@ class ProductAssistant:
     # Safety cap on tool-calling rounds so a misbehaving model can't loop forever.
     max_tool_rounds: int = 5
 
-    def __init__(self):
+    def __init__(self, user=None):
+        # The chat owner (``chat.created_by``), used to scope the cart tools to THIS
+        # user's draft order. None/anonymous -> cart tools are not bound.
+        self.user = user
         # Two different models: embeddings turn text into vectors for catalog SEARCH
         # (similarity, no reasoning, cheap); the LLM is the agent that REASONS and REPLIES.
         # No model set -> the library default (text-embedding-ada-002). Index build
@@ -81,10 +85,10 @@ class ProductAssistant:
         """Tools bound to the agent.
 
         ``search_products`` is read-only (FAISS similarity + price filter) so it is safe
-        for guests too. ``view_cart`` / ``add_to_cart`` land in later commits. Built as a
-        closure so it captures the already-loaded vector store instead of reloading FAISS
-        on every call. With no usable index we bind nothing → the model behaves like a
-        plain single call.
+        for guests too. ``view_cart`` / ``add_to_cart`` operate on the chat owner's draft
+        order and are bound ONLY for an authenticated user. Built as closures so they
+        capture the already-loaded vector store / user instead of re-resolving on every
+        call. With no usable index we bind no search → the model behaves like a plain call.
         """
         if not self.vectorstore:
             return []
@@ -126,7 +130,39 @@ class ProductAssistant:
             logger.info("search_products -> %d product(s)", len(docs))
             return self._format_product_info(docs)
 
-        return [search_products]
+        tools = [search_products]
+
+        # The chat owner is always a real User row — a registered user OR a guest's lazy
+        # User (get_actor). Either way the cart tools scope to THIS owner's draft order, so
+        # guests get them too. The guard is just a None-safety check.
+        if self.user:
+            user = self.user
+
+            @tool
+            def view_cart() -> str:
+                """Show what's currently in the customer's shopping cart.
+
+                Use this whenever the customer asks what's in their cart. Returns each item
+                with quantity and subtotal plus the total, or a note that the cart is empty.
+                """
+                logger.info("tool view_cart(user=%s)", getattr(user, "id", None))
+                order = get_draft_order(user)
+                items = list(order.items.select_related("product").all()) if order else []
+                if not items:
+                    return "The cart is empty."
+                # Format money to 2 decimals — set_subtotal/total_amount return raw Decimals
+                # with trailing zeros, which read awkwardly when the model echoes them back.
+                lines = [
+                    f"{i.quantity} x {i.product.name} — subtotal {i.set_subtotal():.2f}"
+                    for i in items
+                ]
+                order.set_total_amount()
+                lines.append(f"Total: {order.total_amount:.2f}")
+                return "\n".join(lines)
+
+            tools.append(view_cart)
+
+        return tools
 
     def answer_question(self, chat_history: List[ChatHistoryMessage]) -> str:
         """

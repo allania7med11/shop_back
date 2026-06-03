@@ -3,6 +3,7 @@ from django.db import transaction
 
 from ai.assistant import ChatHistoryMessage, CreatedByType, ProductAssistant
 from authentication.models import GuestUser, UserProfile
+from authentication.utils import get_actor, get_actor_from_scope
 from chat.models import Chat, Message
 from chat.signals import update_latest_message
 
@@ -81,57 +82,24 @@ def get_current_chat(request):
     ).first()  # Return guest chat if exists, otherwise None
 
 
-def get_or_create_current_chat(user, guest_token=None):
-    """
-    Returns the current chat for the given user.
-    - If the user is authenticated, fetch or create their chat.
-    - If it's a guest user, fetch or create their chat using the guest token.
-    """
-    if user.is_authenticated:
-        chat, _ = Chat.objects.get_or_create(created_by=user)
-        return chat
-
-    if guest_token:
-        guest_user, _ = GuestUser.objects.get_or_create(token=guest_token)
-        chat, _ = Chat.objects.get_or_create(created_by=guest_user.user)
-        return chat
-
-    return None  # No valid user or guest token
-
-
 def get_or_create_current_chat_by_request(request):
-    """
-    Extracts user and guest_token from Django's HTTP request object
-    and calls get_or_create_current_chat.
-    """
-    user = request.user
-    guest_token = request.session.get("guest_token")
+    """Get (or create) the chat for the request's actor (registered user or guest).
 
-    if not guest_token and not user.is_authenticated:
-        guest_user = GuestUser.objects.create()
-        request.session["guest_token"] = guest_user.token
-        request.session.modified = True
-        guest_token = guest_user.token
-
-    return get_or_create_current_chat(user, guest_token)
+    Identity comes from the single ``get_actor`` resolver, so the chat owner is the SAME
+    user the cart keys on — no separate guest-token branch here anymore.
+    """
+    chat, _ = Chat.objects.get_or_create(created_by=get_actor(request))
+    return chat
 
 
 def get_or_create_current_chat_by_scope(scope):
-    """
-    Extracts user and guest_token from Django Channels WebSocket scope and
-    calls get_or_create_current_chat.
-    """
-    user = scope.get("user", None)
-    session = scope.get("session", {})
-    guest_token = session.get("guest_token")
+    """WebSocket counterpart: resolve the actor from the Channels handshake.
 
-    if not guest_token and (not user or not user.is_authenticated):
-        guest_user = GuestUser.objects.create()
-        scope["session"]["guest_token"] = guest_user.token
-        scope["session"].modified = True
-        guest_token = guest_user.token
-
-    return get_or_create_current_chat(user, guest_token)
+    ``get_actor_from_scope`` reads the same guest cookie sent on the WS upgrade, so a guest
+    who opens chat before any HTTP request still maps to one identity (no second token).
+    """
+    chat, _ = Chat.objects.get_or_create(created_by=get_actor_from_scope(scope))
+    return chat
 
 
 def get_or_create_chatbot_user():
@@ -184,7 +152,7 @@ def get_ai_response_from_chat(chat):
         # Get chatbot user
         chatbot_user = get_or_create_chatbot_user()
         # Get AI response
-        assistant = ProductAssistant()
+        assistant = ProductAssistant(user=chat.created_by)
         ai_response = assistant.answer_question(chat_history)
         # Create AI message
         return Message.objects.create(chat=chat, created_by=chatbot_user, content=ai_response)
