@@ -45,7 +45,11 @@ class ProductAssistant:
     max_tool_rounds: int = 5
 
     def __init__(self):
-        self.embeddings = OpenAIEmbeddings()
+        # Two different models: embeddings turn text into vectors for catalog SEARCH
+        # (similarity, no reasoning, cheap); the LLM is the agent that REASONS and REPLIES.
+        # No model set -> the library default (text-embedding-ada-002). Index build
+        # (ai/embed.py) must use the SAME model or similarity breaks.
+        self.embeddings = OpenAIEmbeddings(openai_api_key=settings.OPENAI_API_KEY)
         # No temperature: gpt-5 models accept only their default, and langchain_openai
         # omits the parameter when it's unset, so leaving it off keeps the call valid.
         self.llm = ChatOpenAI(model=MODEL, openai_api_key=settings.OPENAI_API_KEY)
