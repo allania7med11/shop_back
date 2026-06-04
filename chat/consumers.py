@@ -18,12 +18,26 @@ class BaseChatConsumer(WebsocketConsumer):
     """Base class for chat consumers with shared functionality."""
 
     def create_websocket_message(
-        self, message_type: str, message: Message, is_typing: bool = None
+        self,
+        message_type: str,
+        message: Message,
+        is_typing: bool = None,
+        invalidates=None,
+        navigate=None,
     ) -> dict:
-        """Create a consistent websocket message structure"""
+        """Create a consistent websocket message structure.
+
+        ``invalidates`` (optional): frontend cache tags to refetch when the reply changed
+        server state (e.g. ["Cart"]). ``navigate`` (optional): a path the agent wants the
+        client to open (e.g. "/cart/").
+        """
         payload = {"message": MessageSerializer(message, context={"scope": self.scope}).data}
         if is_typing is not None:
             payload["is_typing"] = is_typing
+        if invalidates:
+            payload["invalidates"] = invalidates
+        if navigate:
+            payload["navigate"] = navigate
 
         return {"type": "chat_message", "data": {"message_type": message_type, "payload": payload}}
 
@@ -63,6 +77,11 @@ class ChatConsumer(BaseChatConsumer):
         try:
             text_data_json = json.loads(text_data)
             content = text_data_json.get("content")
+            # The customer's live screen (current path + cart), advisory only. Coerced to a
+            # dict so a malformed client value can't break the AI call.
+            client_context = text_data_json.get("client_context")
+            if not isinstance(client_context, dict):
+                client_context = None
 
             if not content:
                 self.send(text_data=json.dumps({"error": "Message content is required"}))
@@ -87,7 +106,9 @@ class ChatConsumer(BaseChatConsumer):
                 self.send_typing_status(is_typing=True)
 
                 # Start AI response generation in a separate thread
-                thread = threading.Thread(target=self.handle_ai_response)
+                thread = threading.Thread(
+                    target=self.handle_ai_response, args=(client_context,)
+                )
                 thread.start()
 
         except json.JSONDecodeError:
@@ -95,20 +116,26 @@ class ChatConsumer(BaseChatConsumer):
         except Exception as e:
             self.send(text_data=json.dumps({"error": f"An error occurred: {str(e)}"}))
 
-    def handle_ai_response(self):
+    def handle_ai_response(self, client_context=None):
         """Handle AI response generation in a separate thread."""
         try:
             self.chat.refresh_from_db()
 
             # Generate and send AI message
-            ai_message = get_ai_response_from_chat(self.chat)
+            ai_message, invalidates, navigate = get_ai_response_from_chat(
+                self.chat, client_context=client_context
+            )
 
             # Stop typing status
             self.send_typing_status(is_typing=False)
 
-            # Send AI response
+            # Send AI response with any client effects: caches to refetch (e.g. ["Cart"])
+            # and a page to navigate to (e.g. "/cart/").
             async_to_sync(self.channel_layer.group_send)(
-                self.room_group_name, self.create_websocket_message("message", ai_message)
+                self.room_group_name,
+                self.create_websocket_message(
+                    "message", ai_message, invalidates=invalidates, navigate=navigate
+                ),
             )
         except Exception as e:
             self.send_typing_status(is_typing=False)  # Stop typing on error
