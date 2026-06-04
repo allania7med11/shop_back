@@ -16,7 +16,7 @@ from langchain_openai import ChatOpenAI
 from ai.utils import get_products_index_path
 from products.models import Product
 from products.tasks import rebuild_product_index_task
-from products.utils.orders import add_item_to_cart, get_draft_order
+from products.utils.orders import add_item_to_cart, get_draft_order, remove_item_from_cart
 
 from .embed import format_product_info
 
@@ -44,10 +44,12 @@ class ChatHistoryMessage:
 
 @dataclass
 class AssistantReply:
-    # The reply text, plus the frontend cache tags to refetch because a write tool ran
-    # this turn (e.g. ["Cart"] after add_to_cart). Empty for read-only turns.
+    # The reply text, the frontend cache tags to refetch because a write tool ran this turn
+    # (e.g. ["Cart"]), and an optional client-side navigation the agent requested (a path
+    # like "/cart/"). Both ride the same WS payload; both empty/None for a plain Q&A turn.
     content: str
     invalidates: List[str]
+    navigate: Optional[str] = None
 
 
 class ProductAssistant:
@@ -55,13 +57,20 @@ class ProductAssistant:
     max_tool_rounds: int = 5
 
     # Frontend cache tags each write tool dirties, keyed by tool name. Read-only tools
-    # (search_products, view_cart) are absent -> they invalidate nothing.
-    TOOL_INVALIDATIONS = {"add_to_cart": ["Cart"]}
+    # (search_products, view_cart, navigation) are absent -> they invalidate nothing.
+    TOOL_INVALIDATIONS = {
+        "add_to_cart": ["Cart"],
+        "update_cart_quantity": ["Cart"],
+        "remove_from_cart": ["Cart"],
+    }
 
     def __init__(self, user=None):
         # The chat owner (``chat.created_by``), used to scope the cart tools to THIS
         # user's draft order. None/anonymous -> cart tools are not bound.
         self.user = user
+        # Client-side navigation the agent requested this turn (set by the nav tools, read
+        # by answer_question). Reset per answer_question call.
+        self._navigate = None
         # Two different models: embeddings turn text into vectors for catalog SEARCH
         # (similarity, no reasoning, cheap); the LLM is the agent that REASONS and REPLIES.
         # No model set -> the library default (text-embedding-ada-002). Index build
@@ -218,6 +227,88 @@ class ProductAssistant:
 
             tools.append(add_to_cart)
 
+            @tool
+            def update_cart_quantity(product_id: str, quantity: int) -> str:
+                """Set the quantity of a product already in the cart to an exact number.
+
+                Use when the customer wants a specific count ("make it 3"). ``quantity`` is
+                ABSOLUTE, not a delta. ``product_id`` is the ``[id: ...]`` from search
+                results. To take an item out entirely, use remove_from_cart instead.
+                """
+                logger.info(
+                    "tool update_cart_quantity(user=%s, product_id=%r, quantity=%r)",
+                    getattr(user, "id", None), product_id, quantity,
+                )
+                if quantity < 1:
+                    return "Quantity must be at least 1. To remove the item, use remove_from_cart."
+                product = Product.objects.filter(slug=product_id).first()
+                if not product:
+                    return f"No product with id '{product_id}'. Call search_products first."
+                try:
+                    item = add_item_to_cart(user, product, quantity, mode="set")
+                except Exception as e:
+                    logger.error("update_cart_quantity failed for slug=%r: %s", product_id, e)
+                    return "Couldn't update the cart right now. Please try again."
+                order = item.order
+                return (
+                    f"Updated {product.name} to {item.quantity} in the cart. "
+                    f"Cart total: {order.total_amount:.2f}."
+                )
+
+            tools.append(update_cart_quantity)
+
+            @tool
+            def remove_from_cart(product_id: str) -> str:
+                """Remove a product from the cart entirely.
+
+                ``product_id`` is the ``[id: ...]`` from search results. Use when the customer
+                wants an item gone; to just lower the count, use update_cart_quantity.
+                """
+                logger.info(
+                    "tool remove_from_cart(user=%s, product_id=%r)",
+                    getattr(user, "id", None), product_id,
+                )
+                product = Product.objects.filter(slug=product_id).first()
+                if not product:
+                    return f"No product with id '{product_id}'. Call search_products first."
+                try:
+                    order = remove_item_from_cart(user, product)
+                except Exception as e:
+                    logger.error("remove_from_cart failed for slug=%r: %s", product_id, e)
+                    return "Couldn't update the cart right now. Please try again."
+                return f"Removed {product.name} from the cart. Cart total: {order.total_amount:.2f}."
+
+            tools.append(remove_from_cart)
+
+        # Navigation tools — drive the customer's screen. Read-only (no cart write), so they
+        # invalidate nothing; they record a path on the assistant that rides the reply.
+        @tool
+        def show_cart_page() -> str:
+            """Take the customer to the cart page to see and edit their full cart.
+
+            Use when they ask to see/open/go to their cart, or after a cart change when
+            showing the whole cart helps.
+            """
+            logger.info("tool show_cart_page()")
+            self._navigate = "/cart/"
+            return "Opening your cart."
+
+        @tool
+        def show_product_page(product_id: str) -> str:
+            """Open a specific product's page for the customer.
+
+            ``product_id`` is the ``[id: ...]`` from search results. Use when they want to
+            look at one product in detail.
+            """
+            logger.info("tool show_product_page(product_id=%r)", product_id)
+            product = Product.objects.filter(slug=product_id).first()
+            if not product:
+                return f"No product with id '{product_id}'. Call search_products first."
+            self._navigate = f"/products/?slug={product.slug}"
+            return f"Showing you {product.name}."
+
+        tools.extend([show_cart_page, show_product_page])
+
         return tools
 
     def answer_question(self, chat_history: List[ChatHistoryMessage]) -> AssistantReply:
@@ -232,6 +323,9 @@ class ProductAssistant:
 
         chat_context = self.build_context(chat_history)
         lc_messages = self._build_prompt(chat_context, chat_history[-1].content)
+
+        # Reset the per-turn navigation slot (nav tools set it during the loop).
+        self._navigate = None
 
         # Bind this assistant's tools (empty when there's no index -> single call).
         tools = self.get_tools()
@@ -248,7 +342,9 @@ class ProductAssistant:
 
                 tool_calls = getattr(ai, "tool_calls", None)
                 if not tool_calls:
-                    return AssistantReply(ai.content, self._invalidations(called_tools))
+                    return AssistantReply(
+                        ai.content, self._invalidations(called_tools), self._navigate
+                    )
 
                 # Dedupe identical calls within a turn so a double-emitted write runs once.
                 # Each tool_call_id still needs its own ToolMessage (API requirement).
@@ -275,7 +371,7 @@ class ProductAssistant:
             content = (ai.content if ai is not None else "") or (
                 "I'm having trouble right now. Please try asking again."
             )
-            return AssistantReply(content, self._invalidations(called_tools))
+            return AssistantReply(content, self._invalidations(called_tools), self._navigate)
         except Exception as e:
             logger.error(f"Error generating AI response: {e}")
             return AssistantReply("I'm having trouble right now. Please try asking again.", [])
@@ -304,10 +400,14 @@ their price, or their specs, you MUST call the search_products tool first — ne
 or guess products, prices, or availability. If a search returns nothing, say so plainly
 and offer the closest real option.
 
-You can also manage the customer's cart: view_cart shows what's in it, and add_to_cart
-puts an item in it. Two hard rules for add_to_cart:
-- ALWAYS get the customer's explicit confirmation first ("Want me to add it?"). Never add
-  something they haven't agreed to.
+You can manage the customer's cart and drive their screen:
+- view_cart shows what's in the cart; add_to_cart adds an item; update_cart_quantity sets an
+  item's exact count; remove_from_cart takes an item out.
+- show_cart_page opens the cart page; show_product_page opens one product's page. Use these
+  when the customer asks to see their cart or a product, or when showing beats describing.
+Two hard rules:
+- For add_to_cart, ALWAYS get explicit confirmation first ("Want me to add it?"). The other
+  cart edits (update/remove) you may do when the customer clearly asks for them.
 - Pass the product's [id: ...] from the search results as product_id — never make one up.
 
 When you reply to the customer:

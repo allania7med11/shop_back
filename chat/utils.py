@@ -9,17 +9,18 @@ from chat.signals import update_latest_message
 
 
 def is_message_owner(request, created_by):
-    """Checks if the given message belongs to the request user, including guest users."""
-    if not request or not request.user:
+    """Whether ``created_by`` is the request's actor — a registered user OR the cookie guest.
+
+    Resolves identity with the same ``get_actor`` the cart/chat use, so the REST ``is_mine``
+    matches what everything else keys on. (The old session-token path missed cookie-based
+    guests, so a guest's own messages came back ``is_mine=False`` and rendered on the bot
+    side.) Memoized on the request — the serializer calls this once per message.
+    """
+    if not request or created_by is None:
         return False
-
-    if created_by == request.user:
-        return True
-
-    guest_token = request.session.get("guest_token")
-    guest_user = GuestUser.objects.filter(user=created_by, token=guest_token).first()
-
-    return guest_user is not None
+    if not hasattr(request, "_actor_cache"):
+        request._actor_cache = get_actor(request)
+    return created_by == request._actor_cache
 
 
 def migrate_guest_chat_to_user(guest_user, user):
@@ -138,10 +139,10 @@ def get_message_creator_type(chat, message_creator):
 
 
 def get_ai_response_from_chat(chat):
-    """Generate the AI reply for a chat. Returns ``(message, invalidates)``.
+    """Generate the AI reply for a chat. Returns ``(message, invalidates, navigate)``.
 
-    ``invalidates`` is the list of frontend cache tags the reply dirtied (e.g. ["Cart"]
-    when the agent added to the cart) so the consumer can tell the client what to refetch.
+    ``invalidates``: frontend cache tags the reply dirtied (e.g. ["Cart"]) to refetch.
+    ``navigate``: a path the agent wants the client to open (e.g. "/cart/"), or None.
     """
     try:
         # Get chat history
@@ -162,7 +163,7 @@ def get_ai_response_from_chat(chat):
         message = Message.objects.create(
             chat=chat, created_by=chatbot_user, content=reply.content
         )
-        return message, reply.invalidates
+        return message, reply.invalidates, reply.navigate
 
     except Exception as e:
         raise Exception(f"Failed to generate AI response: {str(e)}")

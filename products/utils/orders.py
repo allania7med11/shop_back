@@ -53,6 +53,19 @@ def add_item_to_cart(user, product, quantity, *, mode="add"):
     return item
 
 
+def remove_item_from_cart(user, product):
+    """Remove a product line from ``user``'s draft cart and recompute the total.
+
+    Idempotent: removing a product that isn't in the cart is a no-op. Returns the order
+    (with the fresh total) so callers can report it.
+    """
+    with transaction.atomic():
+        order = get_draft_order(user)
+        order.items.filter(product=product).delete()
+        order.set_total_amount()
+    return order
+
+
 def migrate_guest_cart_to_user(guest_user, user):
     """Move the guest's draft cart onto a real user on login/registration.
 
