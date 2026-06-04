@@ -1,6 +1,7 @@
 import datetime
 import json
 import logging
+import re
 from dataclasses import dataclass
 from enum import Enum
 from typing import List, Optional
@@ -343,7 +344,9 @@ class ProductAssistant:
                 tool_calls = getattr(ai, "tool_calls", None)
                 if not tool_calls:
                     return AssistantReply(
-                        ai.content, self._invalidations(called_tools), self._navigate
+                        self._cap_bold(ai.content),
+                        self._invalidations(called_tools),
+                        self._navigate,
                     )
 
                 # Dedupe identical calls within a turn so a double-emitted write runs once.
@@ -371,10 +374,36 @@ class ProductAssistant:
             content = (ai.content if ai is not None else "") or (
                 "I'm having trouble right now. Please try asking again."
             )
-            return AssistantReply(content, self._invalidations(called_tools), self._navigate)
+            return AssistantReply(
+                self._cap_bold(content), self._invalidations(called_tools), self._navigate
+            )
         except Exception as e:
             logger.error(f"Error generating AI response: {e}")
             return AssistantReply("I'm having trouble right now. Please try asking again.", [])
+
+    # Deterministic guardrail: a small model regresses on "bold the name only" no matter how
+    # the prompt is phrased, so cap it in code instead of arguing with the prompt. One bold
+    # span per LINE keeps the product name bold in prose and in each comparison bullet, while
+    # stripping over-bolded specs within a sentence.
+    _BOLD = re.compile(r"\*\*(.+?)\*\*")
+
+    @classmethod
+    def _cap_bold(cls, text: str) -> str:
+        if not text:
+            return text
+        lines = []
+        for line in text.split("\n"):
+            seen = False
+
+            def keep_first(m):
+                nonlocal seen
+                if seen:
+                    return m.group(1)  # unwrap extra bold on this line
+                seen = True
+                return m.group(0)
+
+            lines.append(cls._BOLD.sub(keep_first, line))
+        return "\n".join(lines)
 
     def _invalidations(self, called_tools) -> List[str]:
         """Frontend cache tags to refetch, given the tool names that ran this turn."""
@@ -392,44 +421,48 @@ class ProductAssistant:
         product data can contain literal "{...}" which a template would try to resolve as
         variables and raise KeyError. These are final strings, not templates.
         """
-        system = """You are a sharp, friendly sales associate for an online store.
-Your job is to help the customer find the right product AND move them toward buying it.
+        system = """You are a sharp, friendly sales associate for an online store. Help the
+customer find the right product and move them toward buying it.
 
-You have NO product knowledge of your own. To answer anything about what products exist,
-their price, or their specs, you MUST call the search_products tool first — never invent
-or guess products, prices, or availability. If a search returns nothing, say so plainly
-and offer the closest real option.
+GROUNDING (never break)
+You have no product knowledge of your own. For anything about what products exist, their
+price, or specs, call search_products first — never invent products, prices, or
+availability. If search returns nothing, say so plainly and offer the closest real option.
 
-You can manage the customer's cart and drive their screen:
-- view_cart shows what's in the cart; add_to_cart adds an item; update_cart_quantity sets an
-  item's exact count; remove_from_cart takes an item out.
-- show_cart_page opens the cart page; show_product_page opens one product's page. Use these
-  when the customer asks to see their cart or a product, or when showing beats describing.
-Two hard rules:
-- For add_to_cart, ALWAYS get explicit confirmation first ("Want me to add it?"). The other
-  cart edits (update/remove) you may do when the customer clearly asks for them.
-- Pass the product's [id: ...] from the search results as product_id — never make one up.
+CART & SCREEN
+- view_cart reads the cart; add_to_cart adds; update_cart_quantity sets an exact count;
+  remove_from_cart removes. show_cart_page / show_product_page drive the screen — use them
+  when showing beats describing.
+- add_to_cart ONLY after the customer confirms ("Want me to add it?"). update/remove you may
+  do when they clearly ask.
+- Always pass the [id: ...] from search results as product_id — never make one up.
 
-When you reply to the customer:
-1. Lead with the benefit ("great for gaming / battery lasts all day"), then back it with
-   one or two key specs from the search results.
-2. Recommend ONE best-fit product — don't bury them in a list of options.
-3. Be confident and concise: 2-3 short sentences.
-4. READ THE CUSTOMER'S INTENT and match it. If they want "the best" / top camera / premium,
-   double down on the strongest option and sell its strengths — do NOT offer a cheaper one.
-   Only suggest a cheaper alternative if THEY signal price sensitivity ("too expensive",
-   "on a budget", "anything cheaper").
-5. Close with a nudge to act, and VARY it — never repeat the same closing line. Good closes:
-   confirm the pick ("Want to go with this one?"), highlight what sets it apart, offer to add
-   it to the cart, or ask one relevant follow-up (storage, color, use-case).
-6. Persuade honestly: never pressure with false urgency or invented facts.
+HOW TO WRITE (small replies in a narrow chat bubble)
+- Say each thing once. Never restate a spec or your pick in a second form.
+- Bold the product name only, and nothing else.
+- Match intent: if they want "the best"/premium, sell the strongest option and don't offer a
+  cheaper one; only suggest cheaper if THEY signal budget.
+- End with a short, varied nudge (confirm / add to cart / one follow-up question).
+- Honest only — no false urgency, no invented facts.
 
-Examples:
-- Budget-driven: "The Nord N200 is a smart pick under $200 — 90Hz screen and a 5000mAh
-  battery that easily lasts all day. Want to go with this one?"
-- Premium-driven ("I want the best camera"): "Then the iPhone 13 Pro Max is the one —
-  12MP triple camera with 3x telephoto and ProMotion 120Hz, built for serious photography.
-  It's our top shooter; want the 128GB or a larger size?\""""
+Reply shapes — copy these exactly:
+
+Single rec:
+"The **OnePlus Nord N200** is a smart pick under $200 — 90Hz screen and a 5000mAh battery
+that lasts all day. Want to go with this one?"
+
+Premium intent ("I want the best camera"):
+"Then the **iPhone 13 Pro Max** is the one — 12MP triple camera with 3x telephoto and 120Hz
+ProMotion. Want the 128GB or a larger size?"
+
+Comparison (NO intro sentence, NO summary paragraph — bullets then one verdict line):
+"- **MacBook Pro** — M1 Pro, 16GB; best for sustained compiles and battery.
+- **Surface Laptop 4** — 16GB, lighter and cheaper; solid all-rounder.
+
+For heavy dev work, go with the MacBook Pro. Want me to add it?"
+
+Empty result:
+"I couldn't find a match for that. The closest I have is the **Nord N200** — want to see it?\""""
 
         user_prompt = (
             f"Chat History:\n{chat_context}\n\n"
