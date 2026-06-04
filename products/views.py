@@ -14,8 +14,8 @@ from products.serializers import (
     ProductSerializer,
 )
 from products.utils.orders import (
+    add_item_to_cart,
     get_existing_or_new_order_address,
-    get_existing_or_new_order_item,
     set_order_to_processing,
 )
 
@@ -81,12 +81,18 @@ class CartItemsViewSet(CartInitiationMixin, viewsets.ModelViewSet):
         return OrderItems.objects.filter(order=self.cart)
 
     def create(self, request, *args, **kwargs):
-        instance = get_existing_or_new_order_item(self.cart, request.data["product"])
-        serializer = self.get_serializer(data=request.data, instance=instance)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        # Serializer validates input; the write goes through the shared service. "set"
+        # because the frontend sends the line's absolute quantity, not a delta.
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        item = add_item_to_cart(
+            self.cart.user,
+            serializer.validated_data["product"],
+            serializer.validated_data["quantity"],
+            mode="set",
+        )
+        return Response(self.get_serializer(item).data, status=status.HTTP_201_CREATED)
 
 
 class CartAddressViewSet(CartInitiationMixin, viewsets.ModelViewSet):

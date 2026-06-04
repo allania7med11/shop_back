@@ -56,6 +56,7 @@ def _assistant(llm, docs):
     """Build a ProductAssistant without running __init__ (so no key/index/DB)."""
     a = ProductAssistant.__new__(ProductAssistant)
     a.max_tool_rounds = 5
+    a.user = None  # no chat owner -> only the read-only search tool is bound
     a.llm = llm
     a.vectorstore = FakeVectorStore(docs)
     # Stub the DB-backed formatter: format straight from the doc page_content.

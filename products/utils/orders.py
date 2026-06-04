@@ -1,3 +1,6 @@
+from django.db import transaction
+from django.db.models import F
+
 from authentication.utils import get_actor
 from products.models import Order, OrderAddress, OrderItems, Payment
 
@@ -26,15 +29,28 @@ def get_draft_order(user):
     return order
 
 
-def get_existing_or_new_order_item(order, product):
+def add_item_to_cart(user, product, quantity, *, mode="add"):
+    """Single cart-write path, shared by the HTTP cart and the AI assistant.
+
+    ``mode="set"`` (HTTP: stepper sends absolute qty) vs ``mode="add"`` (assistant: "N more").
+    The whole write runs in one transaction (no stale total on mid-failure); the increment
+    uses ``F`` so concurrent writes can't lose an update. Returns the saved ``OrderItems``
+    (``item.order`` carries the fresh total).
     """
-    Get an instance of an existing item with the same order and product, or else
-    return an instance of an order_item associated with the provided order.
-    """
-    instance = OrderItems.objects.filter(order=order, product=product).first()
-    if not instance:
-        instance = OrderItems(order=order)
-    return instance
+    if quantity < 1:
+        raise ValueError("quantity must be at least 1")
+    with transaction.atomic():
+        order = get_draft_order(user)
+        item, created = OrderItems.objects.get_or_create(
+            order=order, product=product, defaults={"quantity": quantity},
+        )
+        if not created:
+            new_quantity = F("quantity") + quantity if mode == "add" else quantity
+            OrderItems.objects.filter(pk=item.pk).update(quantity=new_quantity)
+            item.refresh_from_db()
+        item.set_subtotal()
+        order.set_total_amount()
+    return item
 
 
 def migrate_guest_cart_to_user(guest_user, user):

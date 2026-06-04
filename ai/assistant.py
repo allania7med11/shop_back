@@ -1,4 +1,5 @@
 import datetime
+import json
 import logging
 from dataclasses import dataclass
 from enum import Enum
@@ -15,7 +16,7 @@ from langchain_openai import ChatOpenAI
 from ai.utils import get_products_index_path
 from products.models import Product
 from products.tasks import rebuild_product_index_task
-from products.utils.orders import get_draft_order
+from products.utils.orders import add_item_to_cart, get_draft_order
 
 from .embed import format_product_info
 
@@ -73,13 +74,17 @@ class ProductAssistant:
             return None
 
     def _format_product_info(self, docs: List[Document]) -> str:
-        """Format product information for the LLM context."""
+        """Format products for the LLM, each tagged with ``[id: <slug>]`` for the cart tools.
+
+        Tagged here, not in the embedded ``embed.format_product_info`` — keeps the slug out
+        of the similarity vectors. add_to_cart validates the id, so a bad one fails loud.
+        """
         product_info = []
         for doc in docs:
             product = Product.objects.get(slug=doc.metadata["product_slug"])
             content, _ = format_product_info(product)
-            product_info.append(content)
-        return "\n".join(product_info)
+            product_info.append(f"{content}\n[id: {product.slug}]")
+        return "\n\n".join(product_info)
 
     def get_tools(self) -> list:
         """Tools bound to the agent.
@@ -162,6 +167,45 @@ class ProductAssistant:
 
             tools.append(view_cart)
 
+            @tool
+            def add_to_cart(product_id: str, quantity: int = 1) -> str:
+                """Add a product to the customer's cart. Only call AFTER they confirm.
+
+                ``product_id``: the ``[id: ...]`` from search_products results — never invent
+                one. ``quantity`` (default 1) is ADDED to the current quantity. Returns the
+                new quantity and cart total, or an error to act on.
+                """
+                logger.info(
+                    "tool add_to_cart(user=%s, product_id=%r, quantity=%r)",
+                    getattr(user, "id", None), product_id, quantity,
+                )
+                if quantity < 1:
+                    return "Quantity must be at least 1."
+                product = Product.objects.filter(slug=product_id).first()
+                if not product:
+                    return (
+                        f"No product with id '{product_id}'. Call search_products first "
+                        "to get a valid product id."
+                    )
+                try:
+                    # mode="add" = increment. Shared atomic write lives in the orders service.
+                    item = add_item_to_cart(user, product, quantity, mode="add")
+                except Exception as e:
+                    logger.error("add_to_cart failed for slug=%r: %s", product_id, e)
+                    return "Couldn't add that to the cart right now. Please try again."
+
+                order = item.order
+                logger.info(
+                    "add_to_cart -> item=%s qty=%s order_total=%s",
+                    item.id, item.quantity, order.total_amount,
+                )
+                return (
+                    f"Added {quantity} x {product.name}. Now {item.quantity} in the cart. "
+                    f"Cart total: {order.total_amount:.2f}."
+                )
+
+            tools.append(add_to_cart)
+
         return tools
 
     def answer_question(self, chat_history: List[ChatHistoryMessage]) -> str:
@@ -192,14 +236,23 @@ class ProductAssistant:
                 if not tool_calls:
                     return ai.content
 
-                # Run each requested tool and feed the result back to the model.
+                # Dedupe identical calls within a turn so a double-emitted write runs once.
+                # Each tool_call_id still needs its own ToolMessage (API requirement).
+                results_by_call = {}
                 for call in tool_calls:
                     logger.info(
                         "round %d/%d: tool call %s args=%s",
                         round_num, self.max_tool_rounds, call["name"], call["args"],
                     )
-                    tool = tool_map.get(call["name"])
-                    result = tool.invoke(call["args"]) if tool else f"Unknown tool: {call['name']}"
+                    key = (call["name"], json.dumps(call["args"], sort_keys=True))
+                    if key in results_by_call:
+                        result = results_by_call[key]
+                    else:
+                        tool = tool_map.get(call["name"])
+                        result = (
+                            tool.invoke(call["args"]) if tool else f"Unknown tool: {call['name']}"
+                        )
+                        results_by_call[key] = result
                     lc_messages.append(ToolMessage(content=str(result), tool_call_id=call["id"]))
 
             # Exhausted the round cap.
@@ -226,6 +279,12 @@ their price, or their specs, you MUST call the search_products tool first — ne
 or guess products, prices, or availability. If a search returns nothing, say so plainly
 and offer the closest real option.
 
+You can also manage the customer's cart: view_cart shows what's in it, and add_to_cart
+puts an item in it. Two hard rules for add_to_cart:
+- ALWAYS get the customer's explicit confirmation first ("Want me to add it?"). Never add
+  something they haven't agreed to.
+- Pass the product's [id: ...] from the search results as product_id — never make one up.
+
 When you reply to the customer:
 1. Lead with the benefit ("great for gaming / battery lasts all day"), then back it with
    one or two key specs from the search results.
@@ -236,9 +295,8 @@ When you reply to the customer:
    Only suggest a cheaper alternative if THEY signal price sensitivity ("too expensive",
    "on a budget", "anything cheaper").
 5. Close with a nudge to act, and VARY it — never repeat the same closing line. Good closes:
-   confirm the pick ("Want to go with this one?"), highlight what sets it apart, or ask one
-   relevant follow-up (storage, color, use-case). (You cannot add to the cart yet, so don't
-   offer to.)
+   confirm the pick ("Want to go with this one?"), highlight what sets it apart, offer to add
+   it to the cart, or ask one relevant follow-up (storage, color, use-case).
 6. Persuade honestly: never pressure with false urgency or invented facts.
 
 Examples:
