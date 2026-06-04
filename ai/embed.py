@@ -1,6 +1,7 @@
 import logging
 from typing import Dict, Tuple
 
+from django.conf import settings
 from django.utils.html import strip_tags
 from langchain.schema import Document
 from langchain_community.embeddings import OpenAIEmbeddings
@@ -109,8 +110,9 @@ def create_vector_indexes():
     """
     documents = build_product_documents()
 
-    # Create OpenAI embeddings for semantic similarity
-    embeddings = OpenAIEmbeddings()
+    # Create OpenAI embeddings for semantic similarity. No model set -> library default
+    # (text-embedding-ada-002); must match the query-time model in ai/assistant.py.
+    embeddings = OpenAIEmbeddings(openai_api_key=settings.OPENAI_API_KEY)
 
     # Convert documents into a FAISS vector index
     vectorstore = FAISS.from_documents(documents, embeddings)

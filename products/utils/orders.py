@@ -1,62 +1,92 @@
-import uuid
+from django.db import transaction
+from django.db.models import F
 
+from authentication.utils import get_actor
 from products.models import Order, OrderAddress, OrderItems, Payment
 
 
 def get_current_draft_order(request):
-    session_order = get_session_order(request)
-    if not request.user.is_authenticated:
-        if session_order:
-            return session_order
-        order_uuid = request.session.get("order_uuid")
-        if not order_uuid:
-            order_uuid = str(uuid.uuid4())  # Use a new UUID for the order_uuid
-            request.session["order_uuid"] = order_uuid
-        order = Order.objects.create(
-            uuid=order_uuid,
-            status=Order.OrderStatus.DRAFT,
-        )
-        return order
-    user = request.user
-    user_order = Order.objects.filter(user=user, status=Order.OrderStatus.DRAFT).first()
-    if session_order:
-        if not user_order:
-            session_order.uuid = None
-            session_order.user = user
-            session_order.save()
-            return session_order
-        merge_orders(user_order, session_order)
-        session_order.delete()
-        return user_order
-    if user_order:
-        return user_order
-    order = Order.objects.create(
-        user=user,
-        status=Order.OrderStatus.DRAFT,
-    )
+    """The current draft order (cart) for whoever is acting — guest or registered user.
+
+    Resolves the actor via ``get_actor`` and delegates to ``get_draft_order``, so the HTTP
+    cart and the AI assistant key on the SAME user-scoped order (Option B). The old
+    ``order_uuid``/``user=None`` guest path is gone — it was the source of the divergence
+    (the cart page showing empty while the assistant saw items). Guest→user cart merging
+    now happens once, on login/registration, in the ``user_logged_in`` handler.
+    """
+    return get_draft_order(get_actor(request))
+
+
+def get_draft_order(user):
+    """Get (or create) the draft order scoped strictly to ``user`` (a real or guest User).
+
+    Single, request-free cart resolver shared by the HTTP layer (via
+    ``get_current_draft_order``) and the AI assistant (which only has the chat owner).
+    """
+    order = Order.objects.filter(user=user, status=Order.OrderStatus.DRAFT).first()
+    if not order:
+        order = Order.objects.create(user=user, status=Order.OrderStatus.DRAFT)
     return order
 
 
-def get_session_order(request):
-    order_uuid = request.session.get("order_uuid")
-    if order_uuid:
-        order = Order.objects.filter(
-            uuid=order_uuid,
-            status=Order.OrderStatus.DRAFT,
-        ).first()
-        return order
-    return None
+def add_item_to_cart(user, product, quantity, *, mode="add"):
+    """Single cart-write path, shared by the HTTP cart and the AI assistant.
+
+    ``mode="set"`` (HTTP: stepper sends absolute qty) vs ``mode="add"`` (assistant: "N more").
+    The whole write runs in one transaction (no stale total on mid-failure); the increment
+    uses ``F`` so concurrent writes can't lose an update. Returns the saved ``OrderItems``
+    (``item.order`` carries the fresh total).
+    """
+    if quantity < 1:
+        raise ValueError("quantity must be at least 1")
+    with transaction.atomic():
+        order = get_draft_order(user)
+        item, created = OrderItems.objects.get_or_create(
+            order=order, product=product, defaults={"quantity": quantity},
+        )
+        if not created:
+            new_quantity = F("quantity") + quantity if mode == "add" else quantity
+            OrderItems.objects.filter(pk=item.pk).update(quantity=new_quantity)
+            item.refresh_from_db()
+        item.set_subtotal()
+        order.set_total_amount()
+    return item
 
 
-def get_existing_or_new_order_item(order, product):
+def remove_item_from_cart(user, product):
+    """Remove a product line from ``user``'s draft cart and recompute the total.
+
+    Idempotent: removing a product that isn't in the cart is a no-op. Returns the order
+    (with the fresh total) so callers can report it.
     """
-    Get an instance of an existing item with the same order and product, or else
-    return an instance of an order_item associated with the provided order.
+    with transaction.atomic():
+        order = get_draft_order(user)
+        order.items.filter(product=product).delete()
+        order.set_total_amount()
+    return order
+
+
+def migrate_guest_cart_to_user(guest_user, user):
+    """Move the guest's draft cart onto a real user on login/registration.
+
+    If the user already has a draft cart, merge the guest's items into it (``merge_orders``
+    dedupes by product and sums quantity) and drop the guest order; otherwise just reassign
+    the guest order to the user. Handles both new and pre-existing accounts.
     """
-    instance = OrderItems.objects.filter(order=order, product=product).first()
-    if not instance:
-        instance = OrderItems(order=order)
-    return instance
+    guest_order = Order.objects.filter(
+        user=guest_user.user, status=Order.OrderStatus.DRAFT
+    ).first()
+    if not guest_order:
+        return
+
+    user_order = Order.objects.filter(user=user, status=Order.OrderStatus.DRAFT).first()
+    if not user_order:
+        guest_order.user = user
+        guest_order.save()
+        return
+
+    merge_orders(user_order, guest_order)
+    guest_order.delete()
 
 
 def merge_orders(current_order: Order, other_order: Order):
