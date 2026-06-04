@@ -312,7 +312,9 @@ class ProductAssistant:
 
         return tools
 
-    def answer_question(self, chat_history: List[ChatHistoryMessage]) -> AssistantReply:
+    def answer_question(
+        self, chat_history: List[ChatHistoryMessage], client_context=None
+    ) -> AssistantReply:
         """
         Generate an answer to a customer question about products, running a bounded
         tool-calling loop. The model decides when to call ``search_products`` (no forced
@@ -323,7 +325,9 @@ class ProductAssistant:
             return AssistantReply("No question provided.", [])
 
         chat_context = self.build_context(chat_history)
-        lc_messages = self._build_prompt(chat_context, chat_history[-1].content)
+        lc_messages = self._build_prompt(
+            chat_context, chat_history[-1].content, client_context
+        )
 
         # Reset the per-turn navigation slot (nav tools set it during the loop).
         self._navigate = None
@@ -414,7 +418,16 @@ class ProductAssistant:
                     tags.append(tag)
         return tags
 
-    def _build_prompt(self, chat_context: str, current_question: str):
+    def _render_client_context(self, client_context) -> str:
+        """Render the customer's current page as a prompt block (cart stays in view_cart)."""
+        if not client_context:
+            return ""
+        path = str(client_context.get("current_path") or "")[:200]
+        if not path:
+            return ""
+        return f"<CLIENT CONTEXT>\nCurrent page: {path}\n</CLIENT CONTEXT>"
+
+    def _build_prompt(self, chat_context: str, current_question: str, client_context=None):
         """Build the message list fed to the model.
 
         Messages are constructed directly (not via a prompt template): chat history and
@@ -439,6 +452,12 @@ CART & SCREEN
 - To change the cart you MUST call the matching tool, EVERY time. Never say "done" or state a
   new quantity/total unless a cart tool returned it THIS turn — the tool's result is your only
   proof the change happened. If you didn't call a tool, you didn't change anything.
+- Confirm a cart edit in one short line.
+
+CLIENT CONTEXT (when a <CLIENT CONTEXT> block is present, it's the customer's current page)
+- NEVER offer to open a page they're already on. If the page is /cart/, don't offer to show
+  the cart or call show_cart_page; if it's a product's page, don't offer to open that product.
+- It's only the page — for what's IN the cart, call view_cart.
 
 HOW TO WRITE (small replies in a narrow chat bubble)
 - Say each thing once. Never restate a spec or your pick in a second form.
@@ -467,9 +486,11 @@ For heavy dev work, go with the MacBook Pro. Want me to add it?"
 Empty result:
 "I couldn't find a match for that. The closest I have is the **Nord N200** — want to see it?\""""
 
+        context_block = self._render_client_context(client_context)
         user_prompt = (
             f"Chat History:\n{chat_context}\n\n"
-            f"Customer Question: {current_question}\n"
+            + (f"{context_block}\n\n" if context_block else "")
+            + f"Customer Question: {current_question}\n"
             "Please provide a helpful response."
         )
 

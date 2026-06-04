@@ -138,9 +138,11 @@ def get_message_creator_type(chat, message_creator):
     )
 
 
-def get_ai_response_from_chat(chat):
+def get_ai_response_from_chat(chat, client_context=None):
     """Generate the AI reply for a chat. Returns ``(message, invalidates, navigate)``.
 
+    ``client_context``: the customer's live screen (current path + cart) sent with the
+    message, so the agent is page/cart aware (no redundant nav offers, resolves "this one").
     ``invalidates``: frontend cache tags the reply dirtied (e.g. ["Cart"]) to refetch.
     ``navigate``: a path the agent wants the client to open (e.g. "/cart/"), or None.
     """
@@ -158,7 +160,7 @@ def get_ai_response_from_chat(chat):
         chatbot_user = get_or_create_chatbot_user()
         # Get AI response
         assistant = ProductAssistant(user=chat.created_by)
-        reply = assistant.answer_question(chat_history)
+        reply = assistant.answer_question(chat_history, client_context=client_context)
         # Create AI message
         message = Message.objects.create(
             chat=chat, created_by=chatbot_user, content=reply.content

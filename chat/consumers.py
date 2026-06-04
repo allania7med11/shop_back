@@ -77,6 +77,11 @@ class ChatConsumer(BaseChatConsumer):
         try:
             text_data_json = json.loads(text_data)
             content = text_data_json.get("content")
+            # The customer's live screen (current path + cart), advisory only. Coerced to a
+            # dict so a malformed client value can't break the AI call.
+            client_context = text_data_json.get("client_context")
+            if not isinstance(client_context, dict):
+                client_context = None
 
             if not content:
                 self.send(text_data=json.dumps({"error": "Message content is required"}))
@@ -101,7 +106,9 @@ class ChatConsumer(BaseChatConsumer):
                 self.send_typing_status(is_typing=True)
 
                 # Start AI response generation in a separate thread
-                thread = threading.Thread(target=self.handle_ai_response)
+                thread = threading.Thread(
+                    target=self.handle_ai_response, args=(client_context,)
+                )
                 thread.start()
 
         except json.JSONDecodeError:
@@ -109,13 +116,15 @@ class ChatConsumer(BaseChatConsumer):
         except Exception as e:
             self.send(text_data=json.dumps({"error": f"An error occurred: {str(e)}"}))
 
-    def handle_ai_response(self):
+    def handle_ai_response(self, client_context=None):
         """Handle AI response generation in a separate thread."""
         try:
             self.chat.refresh_from_db()
 
             # Generate and send AI message
-            ai_message, invalidates, navigate = get_ai_response_from_chat(self.chat)
+            ai_message, invalidates, navigate = get_ai_response_from_chat(
+                self.chat, client_context=client_context
+            )
 
             # Stop typing status
             self.send_typing_status(is_typing=False)
