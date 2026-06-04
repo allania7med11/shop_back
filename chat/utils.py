@@ -138,7 +138,11 @@ def get_message_creator_type(chat, message_creator):
 
 
 def get_ai_response_from_chat(chat):
-    """Generate AI response based on chat message history."""
+    """Generate the AI reply for a chat. Returns ``(message, invalidates)``.
+
+    ``invalidates`` is the list of frontend cache tags the reply dirtied (e.g. ["Cart"]
+    when the agent added to the cart) so the consumer can tell the client what to refetch.
+    """
     try:
         # Get chat history
         chat_history = [
@@ -153,9 +157,12 @@ def get_ai_response_from_chat(chat):
         chatbot_user = get_or_create_chatbot_user()
         # Get AI response
         assistant = ProductAssistant(user=chat.created_by)
-        ai_response = assistant.answer_question(chat_history)
+        reply = assistant.answer_question(chat_history)
         # Create AI message
-        return Message.objects.create(chat=chat, created_by=chatbot_user, content=ai_response)
+        message = Message.objects.create(
+            chat=chat, created_by=chatbot_user, content=reply.content
+        )
+        return message, reply.invalidates
 
     except Exception as e:
         raise Exception(f"Failed to generate AI response: {str(e)}")

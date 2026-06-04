@@ -42,9 +42,21 @@ class ChatHistoryMessage:
     created_at: datetime
 
 
+@dataclass
+class AssistantReply:
+    # The reply text, plus the frontend cache tags to refetch because a write tool ran
+    # this turn (e.g. ["Cart"] after add_to_cart). Empty for read-only turns.
+    content: str
+    invalidates: List[str]
+
+
 class ProductAssistant:
     # Safety cap on tool-calling rounds so a misbehaving model can't loop forever.
     max_tool_rounds: int = 5
+
+    # Frontend cache tags each write tool dirties, keyed by tool name. Read-only tools
+    # (search_products, view_cart) are absent -> they invalidate nothing.
+    TOOL_INVALIDATIONS = {"add_to_cart": ["Cart"]}
 
     def __init__(self, user=None):
         # The chat owner (``chat.created_by``), used to scope the cart tools to THIS
@@ -208,7 +220,7 @@ class ProductAssistant:
 
         return tools
 
-    def answer_question(self, chat_history: List[ChatHistoryMessage]) -> str:
+    def answer_question(self, chat_history: List[ChatHistoryMessage]) -> AssistantReply:
         """
         Generate an answer to a customer question about products, running a bounded
         tool-calling loop. The model decides when to call ``search_products`` (no forced
@@ -216,7 +228,7 @@ class ProductAssistant:
         forever. With no tools bound it behaves like a single LLM call.
         """
         if not chat_history:
-            return "No question provided."
+            return AssistantReply("No question provided.", [])
 
         chat_context = self.build_context(chat_history)
         lc_messages = self._build_prompt(chat_context, chat_history[-1].content)
@@ -226,6 +238,8 @@ class ProductAssistant:
         llm = self.llm.bind_tools(tools) if tools else self.llm
         tool_map = {t.name: t for t in tools}
 
+        # Tool names that ran this turn -> which frontend caches to invalidate on the reply.
+        called_tools = set()
         try:
             ai = None
             for round_num in range(1, self.max_tool_rounds + 1):
@@ -234,7 +248,7 @@ class ProductAssistant:
 
                 tool_calls = getattr(ai, "tool_calls", None)
                 if not tool_calls:
-                    return ai.content
+                    return AssistantReply(ai.content, self._invalidations(called_tools))
 
                 # Dedupe identical calls within a turn so a double-emitted write runs once.
                 # Each tool_call_id still needs its own ToolMessage (API requirement).
@@ -244,6 +258,7 @@ class ProductAssistant:
                         "round %d/%d: tool call %s args=%s",
                         round_num, self.max_tool_rounds, call["name"], call["args"],
                     )
+                    called_tools.add(call["name"])
                     key = (call["name"], json.dumps(call["args"], sort_keys=True))
                     if key in results_by_call:
                         result = results_by_call[key]
@@ -257,12 +272,22 @@ class ProductAssistant:
 
             # Exhausted the round cap.
             logger.warning("answer_question hit max_tool_rounds=%d", self.max_tool_rounds)
-            return (ai.content if ai is not None else "") or (
+            content = (ai.content if ai is not None else "") or (
                 "I'm having trouble right now. Please try asking again."
             )
+            return AssistantReply(content, self._invalidations(called_tools))
         except Exception as e:
             logger.error(f"Error generating AI response: {e}")
-            return "I'm having trouble right now. Please try asking again."
+            return AssistantReply("I'm having trouble right now. Please try asking again.", [])
+
+    def _invalidations(self, called_tools) -> List[str]:
+        """Frontend cache tags to refetch, given the tool names that ran this turn."""
+        tags = []
+        for name in called_tools:
+            for tag in self.TOOL_INVALIDATIONS.get(name, []):
+                if tag not in tags:
+                    tags.append(tag)
+        return tags
 
     def _build_prompt(self, chat_context: str, current_question: str):
         """Build the message list fed to the model.

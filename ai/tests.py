@@ -116,7 +116,7 @@ def test_loop_runs_one_tool_round_then_final_answer():
 
     reply = a.answer_question(_history("find a warm jacket under $50"))
 
-    assert reply == final.content
+    assert reply.content == final.content
     assert llm.invocations == 2  # exactly one tool round, then the final answer
     assert llm.bound_tools and llm.bound_tools[0].name == "search_products"
 
@@ -127,7 +127,7 @@ def test_no_tool_call_returns_immediately():
 
     reply = a.answer_question(_history("hi"))
 
-    assert reply == "Hi! What are you shopping for today?"
+    assert reply.content == "Hi! What are you shopping for today?"
     assert llm.invocations == 1  # no tool round when the model doesn't call a tool
 
 

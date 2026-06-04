@@ -18,12 +18,18 @@ class BaseChatConsumer(WebsocketConsumer):
     """Base class for chat consumers with shared functionality."""
 
     def create_websocket_message(
-        self, message_type: str, message: Message, is_typing: bool = None
+        self, message_type: str, message: Message, is_typing: bool = None, invalidates=None
     ) -> dict:
-        """Create a consistent websocket message structure"""
+        """Create a consistent websocket message structure.
+
+        ``invalidates`` (optional): frontend cache tags to refetch when the reply changed
+        server state (e.g. ["Cart"] after the agent added to the cart).
+        """
         payload = {"message": MessageSerializer(message, context={"scope": self.scope}).data}
         if is_typing is not None:
             payload["is_typing"] = is_typing
+        if invalidates:
+            payload["invalidates"] = invalidates
 
         return {"type": "chat_message", "data": {"message_type": message_type, "payload": payload}}
 
@@ -101,14 +107,15 @@ class ChatConsumer(BaseChatConsumer):
             self.chat.refresh_from_db()
 
             # Generate and send AI message
-            ai_message = get_ai_response_from_chat(self.chat)
+            ai_message, invalidates = get_ai_response_from_chat(self.chat)
 
             # Stop typing status
             self.send_typing_status(is_typing=False)
 
-            # Send AI response
+            # Send AI response (with any cache tags the reply dirtied, e.g. ["Cart"])
             async_to_sync(self.channel_layer.group_send)(
-                self.room_group_name, self.create_websocket_message("message", ai_message)
+                self.room_group_name,
+                self.create_websocket_message("message", ai_message, invalidates=invalidates),
             )
         except Exception as e:
             self.send_typing_status(is_typing=False)  # Stop typing on error
